@@ -1,4 +1,4 @@
-from app.calculations.flame_height import FlameHeightCalculator
+from calculations.flame_height import FlameHeightCalculator
 
 def test_flame_height_calculations():
     """
