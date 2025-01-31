@@ -4,32 +4,66 @@ class MaterialProperties:
     Supports core calculations by providing verified material data.
     """
     
-    # Heat of combustion values (MJ/kg)
+   # Heat of combustion values (kJ/g or MJ/kg)
     HEAT_OF_COMBUSTION = {
-        'wood': 17.5,
-        'polyethylene': 43.3,
-        'polystyrene': 39.8,
+        # Gases
+        'methane': 50.0,
+        'ethane': 47.5,
+        'ethene': 50.4,
+        'propane': 46.5,
+        'carbon_monoxide': 10.1,
+        # Liquids
+        'n-butane': 45.7,
+        'n-hexane': 43.8,
+        'heptane': 44.6,
         'gasoline': 43.7,
         'kerosene': 43.2,
-        'paper': 16.8,
-        'cotton': 16.5,
-        'polyurethane_foam': 23.2,
-        'pvc': 16.4,
-        'methanol': 19.8
+        'benzene': 40.0,
+        'acetone': 30.8,
+        'ethanol': 26.8,
+        'methanol': 19.8,
+        # Ordinary polymers
+        'hdpe': 40.0,  # High-density polyethylene
+        'polyethylene': 43.4,
+        'polypropylene': 44.0,
+        'polystyrene': 35.8,
+        'nylon': 27.9,
+        'nylon_6': 28.8,
+        'pmma': 24.2,  # Polymethyl methacrylate
+        'pbt': 20.9,   # Polybutylene terephthalate
+        'abs': 30.0,   # Acrylonitrile-butadiene-styrene
+        'abs_fr': 11.7,
+        'polyurethane_foam': 22.3,  # Average value from range 18.4-26.3
+        'pvc': 10.0,   # Average value from range 9-11
+        # Woods
+        'douglas_fir': 14.7,
+        'hemlock': 13.3,
+        'plywood': 11.9,
+        'plywood_fr': 11.2
     }
-    
-    # Mass burning flux (kg/m²-s)
+
+    # Mass burning flux (g/m²-s)
     MASS_BURNING_FLUX = {
-        'wood_cribs': 0.08,
-        'wood_panels': 0.062,
-        'gasoline': 0.055,
-        'kerosene': 0.039,
-        'heptane': 0.101,
-        'methanol': 0.017,
-        'crude_oil': 0.035,
-        'diesel_oil': 0.045,
-        'transformer_oil': 0.039,
-        'benzene': 0.085
+        'liquefied_propane': 115.0,  # Average of 100-130
+        'liquefied_natural_gas': 90.0,  # Average of 80-100
+        'benzene': 90.0,
+        'butane': 80.0,
+        'hexane': 75.0,  # Average of 70-80
+        'xylene': 70.0,
+        'jp-4': 60.0,  # Average of 50-70
+        'heptane': 70.0,  # Average of 65-75
+        'gasoline': 55.0,  # Average of 50-60
+        'acetone': 40.0,
+        'methanol': 22.0,
+        'polystyrene_granular': 38.0,
+        'pmma_granular': 28.0,
+        'polyethylene_granular': 26.0,
+        'polypropylene_granular': 24.0,
+        'rigid_polyurethane_foam': 23.5,  # Average of 22-25
+        'flexible_polyurethane_foam': 24.0,  # Average of 21-27
+        'pvc_granular': 16.0,
+        'corrugated_paper': 14.0,
+        'wood_crib': 11.0
     }
     
     # Thermal properties for common wall/ceiling materials
