@@ -2,13 +2,13 @@ from calculations.flashover import FlashoverCalculator
 
 def test_flashover_calculations():
     """
-    Test flashover calculations using the example from NUREG-1805:
-    Room 8' x 10' x 7' with a door 3' x 6'
+    Test flashover calculations using NUREG-1805 example:
+    Room 8' x 10' with a ceiling height of 7' and a door 3' x 6'
     """
     print("\nTesting Flashover Calculator:")
     print("-" * 40)
     
-    # Room dimensions from example
+    # Room dimensions from NUREG-1805 example
     length = 10  # feet
     width = 8    # feet
     height = 7   # feet
@@ -21,10 +21,9 @@ def test_flashover_calculations():
     At = 2 * (length * width + length * height + width * height)  # Total surface area
     A0 = door_width * door_height  # Opening area
     H0 = door_height  # Opening height
-    hk = 0.0016  # Effective heat transfer coefficient for gypsum board
     
     # Test all three methods
-    mqh = FlashoverCalculator.mccaffrey_correlation(At, A0, H0, hk, 'imperial')
+    mqh = FlashoverCalculator.mccaffrey_correlation(At, A0, H0, 'gypsum_board', 'imperial')
     babrauskas = FlashoverCalculator.babrauskas_correlation(A0, H0, 'imperial')
     thomas = FlashoverCalculator.thomas_correlation(At, A0, H0, 'imperial')
     
@@ -34,6 +33,14 @@ def test_flashover_calculations():
     print(f"MQH Method: {mqh:.0f} kW")
     print(f"Babrauskas Method: {babrauskas:.0f} kW")
     print(f"Thomas Method: {thomas:.0f} kW")
+    
+    # Test validation
+    print("\nTesting input validation:")
+    try:
+        FlashoverCalculator.validate_compartment_inputs(100, 150, 10)
+        print("Failed: Should have caught invalid vent area")
+    except ValueError as e:
+        print(f"Successfully caught error: {e}")
 
 if __name__ == "__main__":
     test_flashover_calculations()

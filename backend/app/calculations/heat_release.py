@@ -1,10 +1,10 @@
 from utils.unit_converter import UnitConverter
+from calculations.material_properties import MaterialProperties
 
 class HeatReleaseCalculator:
     """
-    Implements heat release rate calculations based on NUREG-1805 methodology.
-    Calculates the heat release rate (Q) based on mass loss rate and heat of combustion,
-    or based on burning rate per unit area and fire area.
+    Calculates heat release rate based on NUREG-1805 methodologies.
+    Integrates with material properties database for accurate calculations.
     """
     
     @staticmethod
@@ -78,3 +78,38 @@ class HeatReleaseCalculator:
         Q = mass_rate * H_c
         
         return Q
+    
+    @staticmethod
+    def calculate_hrr_from_burning_area(material: str, area: float, units: str = 'SI') -> float:
+        """
+        Calculates heat release rate based on burning area and material properties.
+        
+        Args:
+            material: Name of material from materials database
+            area: Burning area (m² if SI, ft² if imperial)
+            units: 'SI' for metric or 'imperial' for US units
+            
+        Returns:
+            Heat release rate (kW)
+            
+        Formula: Q = m" × A × ΔHc
+        where:
+            Q = heat release rate (kW)
+            m" = mass burning flux (g/m²-s)
+            A = burning area (m²)
+            ΔHc = heat of combustion (kJ/g)
+        """
+        # Get material properties from database
+        mass_flux = MaterialProperties.get_mass_burning_flux(material, 'SI')  # g/m²-s
+        heat_of_combustion = MaterialProperties.get_heat_of_combustion(material, 'SI')  # kJ/g
+        
+        # Convert area to SI if needed
+        working_area = area
+        if units.lower() == 'imperial':
+            working_area = UnitConverter.length_converter(area, 'ft', 'm')**2
+            
+        # Calculate HRR
+        # Note: mass_flux in g/m²-s × heat_of_combustion in kJ/g gives kW/m²
+        hrr = mass_flux * working_area * heat_of_combustion
+        
+        return hrr

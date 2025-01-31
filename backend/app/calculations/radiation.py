@@ -1,51 +1,103 @@
 from utils.unit_converter import UnitConverter
+from calculations.material_properties import MaterialProperties
+from calculations.heat_release import HeatReleaseCalculator
+import math
 
 class PointSourceRadiationCalculator:
     """
-    Implements the point source radiation model from NUREG-1805.
-    This model calculates thermal radiation heat flux at a target location
-    from a fire, treating the flame as a point source of radiation.
+    Implements point source radiation model from NUREG-1805.
+    Calculates radiative heat flux to a target at a specified distance.
     """
     
     @staticmethod
-    def calculate_heat_flux(Q: float, R: float, X: float, units: str = 'SI') -> float:
+    def validate_inputs(Q: float, R: float, distance: float) -> bool:
         """
-        Calculates the radiant heat flux using the point source model.
+        Validates inputs according to NUREG-1805 constraints.
         
         Args:
-            Q: Total heat release rate of the fire (kW)
-            R: Radiative fraction of heat release rate (typically 0.15-0.35)
-            X: Distance from the point source to the target (m if SI, ft if imperial)
-            units: 'SI' for metric or 'imperial' for US customary units
+            Q: Heat release rate (kW)
+            R: Radiative fraction (typical range 0.15-0.35)
+            distance: Distance to target
             
         Returns:
-            Heat flux at the target (kW/m² if SI, BTU/ft²/s if imperial)
-        
-        Formula: q" = (Q * R)/(4 * π * X²)
-        where:
-            q" = heat flux at target
-            Q = heat release rate
-            R = radiative fraction
-            X = distance to target
+            bool: True if inputs are valid
         """
         if Q <= 0:
             raise ValueError("Heat release rate must be positive")
-        if R <= 0 or R >= 1:
+        if R <= 0 or R > 1:
             raise ValueError("Radiative fraction must be between 0 and 1")
-        if X <= 0:
+        if distance <= 0:
             raise ValueError("Distance must be positive")
-            
-        # Convert distance to meters if in imperial units
-        working_X = X
-        if units.lower() == 'imperial':
-            working_X = UnitConverter.length_converter(X, 'ft', 'm')
-            
-        # Calculate heat flux using point source model
-        import math
-        q = (Q * R) / (4 * math.pi * working_X**2)
+        return True
+
+    @staticmethod
+    def calculate_point_source_radiation(Q: float, R: float, distance: float, 
+                                       units: str = 'SI') -> float:
+        """
+        Calculates radiative heat flux using point source model.
         
-        # Convert result to imperial units if requested
-        if units.lower() == 'imperial':
-            q = q * 0.088055  # Convert kW/m² to BTU/ft²/s
+        Args:
+            Q: Heat release rate (kW)
+            R: Radiative fraction (typical range 0.15-0.35)
+            distance: Distance from fire to target (m if SI, ft if imperial)
+            units: 'SI' for metric or 'imperial' for US units
             
-        return q
+        Returns:
+            Heat flux at target (kW/m² if SI, BTU/ft²/s if imperial)
+            
+        Formula: q" = (Q * R)/(4 * π * x²)
+        where:
+            q" = radiative heat flux
+            Q = heat release rate
+            R = radiative fraction
+            x = distance to target
+        """
+        # Validate inputs
+        PointSourceRadiationCalculator.validate_inputs(Q, R, distance)
+        
+        # Convert distance to SI if needed
+        working_distance = distance
+        if units.lower() == 'imperial':
+            working_distance = UnitConverter.length_converter(distance, 'ft', 'm')
+            
+        # Calculate heat flux
+        heat_flux = (Q * R) / (4 * math.pi * working_distance**2)
+        
+        # Convert to imperial units if requested
+        if units.lower() == 'imperial':
+            heat_flux = heat_flux * 0.088055  # Convert kW/m² to BTU/ft²/s
+            
+        return heat_flux
+
+    @staticmethod
+    def calculate_from_material(material: str, area: float, R: float, distance: float, 
+                              units: str = 'SI') -> dict:
+        """
+        Calculates radiative heat flux using material properties.
+        
+        Args:
+            material: Material name from database
+            area: Burning area (m² if SI, ft² if imperial)
+            R: Radiative fraction
+            distance: Distance to target (m if SI, ft if imperial)
+            units: 'SI' for metric or 'imperial' for US units
+            
+        Returns:
+            Dictionary containing:
+                - heat_flux: Calculated radiative heat flux
+                - heat_release_rate: HRR used in calculation
+                - units: Units used for output
+        """
+        # Calculate heat release rate using material properties
+        Q = HeatReleaseCalculator.calculate_hrr_from_burning_area(material, area, units)
+        
+        # Calculate heat flux
+        flux = PointSourceRadiationCalculator.calculate_point_source_radiation(
+            Q, R, distance, units
+        )
+        
+        return {
+            'heat_flux': flux,
+            'heat_release_rate': Q,
+            'units': 'BTU/ft²/s' if units.lower() == 'imperial' else 'kW/m²'
+        }
