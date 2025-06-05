@@ -1,6 +1,279 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
 
+// T-Squared Growth Curve Visual Component
+const TSquaredVisual = ({ time, heatRelease, growthRate, calculateMode, units, customAlpha }) => {
+  // Growth coefficients with actual color values for SVG
+  const coefficients = {
+    slow: { alpha: 0.00293, color: '#48BB78' },      // green
+    medium: { alpha: 0.01172, color: '#ECC94B' },    // yellow  
+    fast: { alpha: 0.0469, color: '#ED8936' },       // orange
+    ultrafast: { alpha: 0.1876, color: '#E53E3E' }   // red
+  };
+
+  // Add custom coefficient if provided
+  if (growthRate === 'custom' && customAlpha) {
+    let alphaValue = parseFloat(customAlpha) || 0;
+    // Convert to SI if needed
+    if (units === 'imperial' && alphaValue > 0) {
+      alphaValue = alphaValue * 1.055056; // BTU/s³ to kW/s²
+    }
+    coefficients.custom = { 
+      alpha: alphaValue, 
+      color: '#805AD5'  // purple
+    };
+  }
+
+  // Convert values to SI for calculations
+  let currentTime = parseFloat(time) || 0;
+  let currentHRR = parseFloat(heatRelease) || 0;
+  
+  if (units === 'imperial' && currentHRR > 0) {
+    currentHRR = currentHRR * 1.055056; // Convert BTU/s to kW
+  }
+
+  // Calculate the current point based on mode
+  const currentCoeff = coefficients[growthRate];
+  if (calculateMode === 'time' && currentHRR > 0 && currentCoeff) {
+    currentTime = Math.sqrt(currentHRR / currentCoeff.alpha);
+  } else if (calculateMode === 'heatRelease' && currentTime > 0 && currentCoeff) {
+    currentHRR = currentCoeff.alpha * currentTime * currentTime;
+  }
+
+  // Set graph dimensions
+  const graphWidth = 400;
+  const graphHeight = 300;
+  const padding = 50; // Increased for y-axis labels
+  const plotWidth = graphWidth - 2 * padding;
+  const plotHeight = graphHeight - 2 * padding;
+
+  // Determine scale based on current values
+  let maxTime = Math.max(600, currentTime * 1.2); // At least 10 minutes, or 20% more than current
+  let maxHRR = Math.max(1000, currentHRR * 1.2); // At least 1MW, or 20% more than current
+
+  // Reference lines for common HRR values
+  const referenceLines = [
+    { value: 1000, label: '1 MW', color: '#805AD5' },    // purple
+    { value: 5000, label: '5 MW', color: '#6B46C1' }     // darker purple
+  ].filter(ref => ref.value <= maxHRR);
+
+  return (
+    <Chakra.Box p={4} bg="gray.50" borderRadius="md">
+      <Chakra.Text fontWeight="bold" mb={3}>Fire Growth Curves</Chakra.Text>
+      
+      <Chakra.Box bg="white" borderRadius="md" p={4}>
+        <svg width={graphWidth} height={graphHeight}>
+          {/* Grid lines */}
+          <g opacity="0.2">
+            {/* Vertical grid lines */}
+            {[0, 1, 2, 3, 4, 5].map(i => {
+              const x = padding + (i / 5) * plotWidth;
+              return (
+                <line
+                  key={`v-${i}`}
+                  x1={x}
+                  y1={padding}
+                  x2={x}
+                  y2={padding + plotHeight}
+                  stroke="gray"
+                  strokeWidth="1"
+                />
+              );
+            })}
+            {/* Horizontal grid lines */}
+            {[0, 1, 2, 3, 4, 5].map(i => {
+              const y = padding + (i / 5) * plotHeight;
+              return (
+                <line
+                  key={`h-${i}`}
+                  x1={padding}
+                  y1={y}
+                  x2={padding + plotWidth}
+                  y2={y}
+                  stroke="gray"
+                  strokeWidth="1"
+                />
+              );
+            })}
+          </g>
+
+          {/* Reference lines */}
+          {referenceLines.map(ref => {
+            const y = padding + plotHeight - (ref.value / maxHRR) * plotHeight;
+            return (
+              <g key={ref.label}>
+                <line
+                  x1={padding}
+                  y1={y}
+                  x2={padding + plotWidth}
+                  y2={y}
+                  stroke={ref.color}
+                  strokeWidth="1"
+                  strokeDasharray="5,5"
+                  opacity="0.5"
+                />
+                <text
+  x={padding + 5}
+  y={y - 5}
+  fontSize="10"
+  fill={ref.color}
+>
+  {ref.label}
+</text>
+              </g>
+            );
+          })}
+
+          {/* Growth curves */}
+          {Object.entries(coefficients)
+            .filter(([rate, config]) => rate !== 'custom' || growthRate === 'custom')
+            .map(([rate, config]) => {
+              const points = [];
+              const timeStep = maxTime / 100;
+              
+              for (let t = 0; t <= maxTime; t += timeStep) {
+                const hrr = config.alpha * t * t;
+                if (hrr <= maxHRR) {
+                  const x = padding + (t / maxTime) * plotWidth;
+                  const y = padding + plotHeight - (hrr / maxHRR) * plotHeight;
+                  points.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+                }
+              }
+              
+              if (points.length === 0) return null;
+              
+              const pathData = `M ${points.join(' L ')}`;
+              const isSelected = rate === growthRate;
+              
+              return (
+                <path
+                  key={rate}
+                  d={pathData}
+                  stroke={config.color}  // NOT stroke={config}
+                  strokeWidth={isSelected ? "3" : "2"}
+                  fill="none"
+                  opacity={isSelected ? 1 : 0.4}
+                />
+              );
+            })}
+
+
+          {/* Axes */}
+          <line
+            x1={padding}
+            y1={padding + plotHeight}
+            x2={padding + plotWidth}
+            y2={padding + plotHeight}
+            stroke="black"
+            strokeWidth="2"
+          />
+          <line
+            x1={padding}
+            y1={padding}
+            x2={padding}
+            y2={padding + plotHeight}
+            stroke="black"
+            strokeWidth="2"
+          />
+
+          {/* Current point */}
+          {currentTime > 0 && currentHRR > 0 && currentCoeff && (
+            <circle
+              cx={padding + (currentTime / maxTime) * plotWidth}
+              cy={padding + plotHeight - (currentHRR / maxHRR) * plotHeight}
+              r="6"
+              fill={currentCoeff.color}  // NOT fill={config.color}
+              stroke="black"
+              strokeWidth="2"
+            />
+          )}
+
+          {/* Axis labels */}
+          <text x={graphWidth / 2} y={graphHeight - 5} textAnchor="middle" fontSize="12">
+            Time (seconds)
+          </text>
+          <text
+            x={15}
+            y={graphHeight / 2}
+            textAnchor="middle"
+            fontSize="12"
+            transform={`rotate(-90 15 ${graphHeight / 2})`}
+          >
+            HRR (kW)
+          </text>
+
+          {/* Time axis values */}
+          {[0, 1, 2, 3, 4, 5].map(i => {
+            const x = padding + (i / 5) * plotWidth;
+            const timeVal = (i / 5) * maxTime;
+            return (
+              <text
+                key={`t-${i}`}
+                x={x}
+                y={padding + plotHeight + 15}
+                textAnchor="middle"
+                fontSize="10"
+              >
+                {timeVal.toFixed(0)}
+              </text>
+            );
+          })}
+
+          {/* HRR axis values */}
+          {[0, 0.25, 0.5, 0.75, 1].map((fraction, i) => {
+            const y = padding + plotHeight - fraction * plotHeight;
+            const hrrVal = fraction * maxHRR;
+            return (
+              <text
+                key={`hrr-${i}`}
+                x={padding - 5}
+                y={y + 4}
+                textAnchor="end"
+                fontSize="10"
+              >
+                {hrrVal >= 1000 ? `${(hrrVal / 1000).toFixed(1)}MW` : `${hrrVal.toFixed(0)}`}
+              </text>
+            );
+          })}
+        </svg>
+
+        {/* Legend */}
+        <Chakra.HStack spacing={4} mt={4} justify="center">
+          {Object.entries(coefficients)
+            .filter(([rate, config]) => rate !== 'custom' || growthRate === 'custom')
+            .map(([rate, config]) => (
+              <Chakra.HStack key={rate} spacing={1}>
+                <Chakra.Box
+                  w="20px"
+                  h="3px"
+                  bg={config.color}
+                  opacity={rate === growthRate ? 1 : 0.4}
+                />
+                <Chakra.Text
+                  fontSize="xs"
+                  fontWeight={rate === growthRate ? "bold" : "normal"}
+                  textTransform="capitalize"
+                >
+                  {rate}
+                </Chakra.Text>
+              </Chakra.HStack>
+            ))}
+        </Chakra.HStack>
+
+        {/* Current values display */}
+        {currentTime > 0 && currentHRR > 0 && (
+          <Chakra.Box mt={3} p={2} bg="gray.50" borderRadius="md">
+            <Chakra.Text fontSize="sm" textAlign="center">
+              Current Point: {currentTime.toFixed(0)}s → {currentHRR.toFixed(0)} kW
+              {units === 'imperial' && ` (${(currentHRR * 0.947817).toFixed(0)} BTU/s)`}
+            </Chakra.Text>
+          </Chakra.Box>
+        )}
+      </Chakra.Box>
+    </Chakra.Box>
+  );
+};
+
 const TSquaredCalculator = () => {
   // State declarations
   const [time, setTime] = useState('');
@@ -327,6 +600,15 @@ const TSquaredCalculator = () => {
     </Chakra.Alert>
   )
 )}
+{/* T-Squared Growth Curves Visual */}
+<TSquaredVisual 
+  time={time}
+  heatRelease={heatRelease}
+  growthRate={growthRate}
+  calculateMode={calculateMode}
+  units={units}
+  customAlpha={customAlpha}
+/>
       </Chakra.VStack>
     </Chakra.Box>
   );
