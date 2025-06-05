@@ -1,6 +1,172 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
 
+// Radiation Zone Visual Component
+const RadiationZoneVisual = ({ heatRelease, distance, radiativeFraction, units }) => {
+  // Zones ordered from lowest to highest flux
+  const zones = [
+    { name: 'Tenability Limit', flux: 1.7, color: 'green.500' },
+    { name: 'Firefighter Gear Limit', flux: 4.5, color: 'yellow.500' },
+    { name: 'SCBA Lens Degradation', flux: 5, color: 'orange.500' },
+    { name: 'Flashover Conditions', flux: 20, color: 'red.600' }
+  ];
+
+  // Convert inputs to SI for calculation
+  let Q = parseFloat(heatRelease) || 0;
+  let R = parseFloat(distance) || 0;
+  const Xr = parseFloat(radiativeFraction) || 0.3;
+
+  if (units === 'imperial') {
+    Q = Q * 1.055056;  // Convert BTU/s to kW
+    R = R * 0.3048;    // Convert ft to m
+  }
+
+  // Calculate distance for each critical flux level
+  // R = sqrt((Q * Xr) / (4 * π * q"))
+  const calculateRadius = (criticalFlux) => {
+    if (!Q || !Xr || !criticalFlux) return 0;
+    return Math.sqrt((Q * Xr) / (4 * Math.PI * criticalFlux));
+  };
+
+  // Scale factor for visualization
+  const maxVisualRadius = 150;
+  const maxRealRadius = Math.max(...zones.map(z => calculateRadius(z.flux)), R) || 10;
+  const scale = maxVisualRadius / maxRealRadius;
+
+  // Calculate current heat flux at specified distance
+  const currentFlux = R > 0 ? (Q * Xr) / (4 * Math.PI * Math.pow(R, 2)) : 0;
+
+  return (
+    <Chakra.Box p={4} bg="gray.50" borderRadius="md">
+      <Chakra.Text fontWeight="bold" mb={3}>Radiation Zone Visualization</Chakra.Text>
+      
+      <Chakra.HStack align="start" spacing={4}>
+        {/* Visualization */}
+        <Chakra.Box 
+          position="relative" 
+          h="400px" 
+          w="400px"
+          bg="white" 
+          borderRadius="md" 
+          overflow="hidden"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+        {/* Zone circles - draw from smallest flux (largest radius) to largest flux (smallest radius) */}
+        {zones.map((zone) => {
+          const radius = calculateRadius(zone.flux) * scale;
+          return (
+            <Chakra.Box
+              key={zone.name}
+              position="absolute"
+              w={`${radius * 2}px`}
+              h={`${radius * 2}px`}
+              borderRadius="full"
+              borderWidth="4px"
+              borderStyle="solid"
+              borderColor={zone.color}
+              bg={zone.flux === 20 ? 'red.100' : zone.flux === 5 ? 'orange.100' : zone.flux === 4.5 ? 'yellow.100' : zone.flux === 1.7 ? 'green.100' : 'gray.100'}
+              opacity={0.8}
+              transition="all 0.3s ease"
+            />
+          );
+        })}
+
+        {/* Fire source at center */}
+        <Chakra.Box
+          position="absolute"
+          w="40px"
+          h="40px"
+          bg="red.500"
+          borderRadius="full"
+          boxShadow="0 0 30px rgba(255, 0, 0, 0.8)"
+          zIndex={10}
+        >
+          <Chakra.Text fontSize="24px" position="absolute" top="-6px" left="8px">
+            🔥
+          </Chakra.Text>
+        </Chakra.Box>
+
+        {/* Person at specified distance */}
+        {R > 0 && (
+          <Chakra.Box
+            position="absolute"
+            left="50%"
+            top="50%"
+            transform={`translate(-50%, -50%) translateX(${R * scale}px)`}
+            zIndex={20}
+          >
+            <Chakra.Text fontSize="30px">
+              🧍
+            </Chakra.Text>
+            <Chakra.Box
+              position="absolute"
+              top="-30px"
+              left="50%"
+              transform="translateX(-50%)"
+              bg={currentFlux > 20 ? 'red.600' : currentFlux > 5 ? 'orange.500' : currentFlux > 4.5 ? 'yellow.500' : currentFlux > 1.7 ? 'green.500' : 'green.400'}
+              color="white"
+              px={2}
+              py={1}
+              borderRadius="md"
+              fontSize="xs"
+              fontWeight="bold"
+              whiteSpace="nowrap"
+            >
+              {currentFlux.toFixed(1)} kW/m²
+            </Chakra.Box>
+          </Chakra.Box>
+        )}
+
+        {/* Distance indicator */}
+        <Chakra.Box position="absolute" bottom={6} right={6} bg="white" p={2} borderRadius="md" boxShadow="md">
+          <Chakra.Text fontSize="xs" color="gray.600">
+            Distance: {distance} {units === 'imperial' ? 'ft' : 'm'}
+          </Chakra.Text>
+        </Chakra.Box>
+      </Chakra.Box>
+      
+      {/* Zone legend - moved outside */}
+      <Chakra.Box bg="white" p={3} borderRadius="md" boxShadow="md" minW="200px">
+        <Chakra.VStack align="start" spacing={1}>
+          <Chakra.Text fontSize="xs" fontWeight="bold" mb={1}>
+            Heat Flux Zones:
+          </Chakra.Text>
+          {zones.map((zone) => {
+            const radius = calculateRadius(zone.flux);
+            const displayRadius = units === 'imperial' ? 
+              (radius * 3.28084).toFixed(1) : 
+              radius.toFixed(1);
+            const unitLabel = units === 'imperial' ? 'ft' : 'm';
+            
+            return (
+              <Chakra.HStack key={zone.name} spacing={2} align="center">
+                <Chakra.Box 
+                  w="12px" 
+                  h="12px" 
+                  bg={zone.color} 
+                  borderRadius="sm"
+                  flexShrink={0}
+                />
+                <Chakra.Text fontSize="11px" fontWeight="medium">
+                  {zone.flux} kW/m² - {zone.name}
+                  {zone.flux === 5 && (
+                    <Chakra.Text as="span" fontSize="10px" color="gray.600">
+                      {' '}(lens damage)
+                    </Chakra.Text>
+                  )}
+                </Chakra.Text>
+              </Chakra.HStack>
+            );
+          })}
+        </Chakra.VStack>
+      </Chakra.Box>
+      </Chakra.HStack>
+    </Chakra.Box>
+  );
+};
+
 const PointSourceCalculator = () => {
   // State declarations
   const [heatRelease, setHeatRelease] = useState('');
@@ -10,15 +176,22 @@ const PointSourceCalculator = () => {
   const [result, setResult] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
 
-  // Critical heat flux values (in kW/m²)
+ // Critical heat flux values from NFPA 921 (2024 ed.) Table 5.5.4.2 + SCBA research
   const CRITICAL_HEAT_FLUX = {
-    'wood_piloted': { value: 12.5, description: 'Piloted ignition of wood' },
-    'wood_auto': { value: 28, description: 'Auto-ignition of wood' },
-    'plastic_piloted': { value: 10, description: 'Piloted ignition of plastics' },
-    'plastic_auto': { value: 22, description: 'Auto-ignition of plastics' },
-    'human_pain': { value: 2.5, description: 'Pain threshold for exposed skin (within 5s)' },
-    'human_limit': { value: 1.7, description: 'Tenability limit for humans' },
-    'firefighter_gear': { value: 4.5, description: 'Operational limit for firefighters in gear' }
+    
+    'flashover_floor': { value: 20, description: 'Residential floor at flashover' },
+    'pain_2s': { value: 20, description: 'Pain (2s exposure), blisters (4s)' },
+    'pain_3s': { value: 15, description: 'Pain (3s exposure), blisters (6s)' },
+    'wood_piloted': { value: 12.5, description: 'Wood ignites with pilot' },
+    'scba_failure': { value: 10, description: 'SCBA facepiece lens failure (holes)' },
+    'pain_5s': { value: 10, description: 'Pain (5s exposure), blisters (10s)' },
+    'scba_degradation': { value: 5, description: 'SCBA facepiece lens degradation onset' },
+    'pain_13s': { value: 5, description: 'Pain (13s exposure), blisters (29s)' },
+    'firefighter_gear': { value: 4.5, description: 'Operational limit for firefighters in gear' },
+    'firefighting': { value: 2.5, description: 'Common firefighting exposure' },
+    'pain_33s': { value: 2.5, description: 'Pain (33s exposure), blisters (79s)' },
+    'tenability': { value: 1.7, description: 'Tenability limit for humans' },
+    'solar': { value: 1.0, description: 'Normal solar radiation (clear day)' }
   };
 
   // Reference data
@@ -122,8 +295,8 @@ const PointSourceCalculator = () => {
   const getHeatFluxStatus = (criticalValue) => {
     if (!result) return 'gray';
     const compareValue = units === 'SI' ? criticalValue : convertHeatFlux(criticalValue, true);
-    if (result >= compareValue * 1.1) return 'red';
-    if (result >= compareValue) return 'yellow';
+    if (result >= compareValue) return 'red';
+    if (result >= compareValue * 0.8) return 'yellow';
     return 'green';
   };
 
@@ -287,6 +460,13 @@ const PointSourceCalculator = () => {
                 </Chakra.VStack>
               </Chakra.CardBody>
             </Chakra.Card>
+            {/* Radiation Zone Visual */}
+            <RadiationZoneVisual 
+              heatRelease={heatRelease}
+              distance={distance}
+              radiativeFraction={radiativeFraction}
+              units={units}
+            />
           </Chakra.VStack>
         )}
 
