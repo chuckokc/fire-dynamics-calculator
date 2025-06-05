@@ -12,6 +12,8 @@ import { useRegisterSW } from 'virtual:pwa-register/react';
 import { ColorModeScript } from '@chakra-ui/react';
 import theme from './theme';
 
+const APP_VERSION = '1.2.1';
+
 // MainApp component contains all calculator functionality and the main interface
 const MainApp = () => {
   // Theme colors that adapt to light/dark mode
@@ -25,7 +27,7 @@ const MainApp = () => {
     updateServiceWorker,
   } = useRegisterSW();
 
-  // Handler for feedback button clicks - opens email client
+    // Handler for feedback button clicks - opens email client
   const handleFeedbackClick = () => {
     window.location.href = 'mailto:chuckokc@gmail.com?subject=Fire Dynamics Calculator Feedback';
   };
@@ -67,7 +69,7 @@ const MainApp = () => {
             </Chakra.VStack>
             
             <Chakra.HStack spacing={2}>
-              <Chakra.Text fontSize="xs" color="gray.500">v1.2.0</Chakra.Text>
+              <Chakra.Text fontSize="xs" color="gray.500">v{APP_VERSION}</Chakra.Text>
               <Chakra.IconButton
                 icon={colorMode === 'light' ? <Moon size={16} /> : <Sun size={16} />}
                 variant="ghost"

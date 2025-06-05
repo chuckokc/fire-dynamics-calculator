@@ -17,7 +17,7 @@ export default defineConfig({
         display: 'standalone',
         scope: '/',
         start_url: '/',
-        version: '1.1.1',  // Changed from 1.1.0
+        version: '1.2.1',  // Updated from 1.1.1
         icons: [
           {
             src: '/icons/icon-192x192.png',

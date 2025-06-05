@@ -264,7 +264,7 @@ const ReferenceGuide = () => {
                 {/* Formula and explanation */}
                 <Chakra.Box>
                   <Chakra.Text fontSize="lg" fontWeight="bold" mb={2}>T-Squared Fire Growth Model</Chakra.Text>
-                  <Chakra.Box bg="gray.50" p={4} borderRadius="md">
+                  <Chakra.Box bg={Chakra.useColorModeValue('gray.50', 'gray.700')} p={4} borderRadius="md">
                     <Chakra.Text fontSize="xl" fontFamily="mono" mb={2}>Q = αt²</Chakra.Text>
                     <Chakra.Text fontSize="sm">
                       Where: Q = heat release rate (kW), α = fire growth coefficient (kW/s²), t = time (s)
