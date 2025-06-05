@@ -6,7 +6,7 @@ const RadiationZoneVisual = ({ heatRelease, distance, radiativeFraction, units }
   // Zones ordered from lowest to highest flux
   const zones = [
     { name: 'Tenability Limit', flux: 1.7, color: 'green.500' },
-    { name: 'Firefighter Gear Limit', flux: 4.5, color: 'yellow.500' },
+    { name: 'Firefighter Gear Working Limit', flux: 4.5, color: 'yellow.500' },
     { name: 'SCBA Lens Degradation', flux: 5, color: 'orange.500' },
     { name: 'Flashover Conditions', flux: 20, color: 'red.600' }
   ];
@@ -178,7 +178,9 @@ const PointSourceCalculator = () => {
 
  // Critical heat flux values from NFPA 921 (2024 ed.) Table 5.5.4.2 + SCBA research
   const CRITICAL_HEAT_FLUX = {
-    
+    'postflashover': { value: 170, description: 'Maximum in postflashover compartment' },
+    'protective_clothing': { value: 80, description: 'Heat flux for protective clothing TPP test' },
+    'fiberboard_ignition': { value: 52, description: 'Fiberboard ignites (5 seconds)' },
     'flashover_floor': { value: 20, description: 'Residential floor at flashover' },
     'pain_2s': { value: 20, description: 'Pain (2s exposure), blisters (4s)' },
     'pain_3s': { value: 15, description: 'Pain (3s exposure), blisters (6s)' },
