@@ -9,6 +9,9 @@ const HeatReleaseCalculator = () => {
   const [manualMassFlux, setManualMassFlux] = useState('');
   const [result, setResult] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  // Add this new state for calculation history
+  const [calculationHistory, setCalculationHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   // Update this section in your MATERIAL_PROPERTIES
 const MATERIAL_PROPERTIES = {
@@ -74,6 +77,37 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
       return (numVal * 10.7639).toFixed(2); // m² to ft²
     }
     return (numVal * 0.092903).toFixed(2);   // ft² to m²
+  };
+
+  // Function to save calculation to history
+  const saveToHistory = () => {
+    if (!result || !material || !burningArea) return;
+    
+    const newEntry = {
+      id: Date.now(),
+      timestamp: new Date().toLocaleString(),
+      material: material,
+      materialName: MATERIAL_PROPERTIES[material]?.name,
+      burningArea: burningArea,
+      units: units,
+      massFlux: needsMassFluxInput ? manualMassFlux : MATERIAL_PROPERTIES[material]?.massFlux,
+      result: result,
+      heatOfCombustion: MATERIAL_PROPERTIES[material]?.heatOfCombustion
+    };
+    
+    // Keep only last 10 calculations
+    setCalculationHistory(prev => [newEntry, ...prev].slice(0, 10));
+  };
+
+  // Function to load calculation from history
+  const loadFromHistory = (entry) => {
+    setMaterial(entry.material);
+    setBurningArea(entry.burningArea);
+    setUnits(entry.units);
+    if (entry.massFlux && !MATERIAL_PROPERTIES[entry.material]?.massFlux) {
+      setManualMassFlux(entry.massFlux.toString());
+    }
+    setShowHistory(false);
   };
 
   // Calculation function
@@ -246,6 +280,72 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
           Calculate Heat Release Rate
         </Chakra.Button>
 
+        {/* Add history toggle button */}
+        {calculationHistory.length > 0 && (
+          <Chakra.Button
+            variant="outline"
+            onClick={() => setShowHistory(!showHistory)}
+          >
+            {showHistory ? 'Hide' : 'Show'} History ({calculationHistory.length})
+          </Chakra.Button>
+        )}
+
+        {/* History display */}
+        {showHistory && calculationHistory.length > 0 && (
+          <Chakra.Card variant="outline">
+            <Chakra.CardBody>
+              <Chakra.HStack justify="space-between" mb={3}>
+                <Chakra.Text fontWeight="bold">Calculation History</Chakra.Text>
+                <Chakra.Button
+                  size="sm"
+                  colorScheme="red"
+                  variant="ghost"
+                  onClick={() => {
+                    setCalculationHistory([]);
+                    setShowHistory(false);
+                  }}
+                >
+                  Clear All
+                </Chakra.Button>
+              </Chakra.HStack>
+              <Chakra.VStack align="stretch" spacing={2}>
+                {calculationHistory.map((entry) => (
+                  <Chakra.Box
+                    key={entry.id}
+                    p={3}
+                    borderWidth="1px"
+                    borderRadius="md"
+                    _hover={{ bg: 'gray.50' }}
+                    cursor="pointer"
+                    onClick={() => loadFromHistory(entry)}
+                  >
+                    <Chakra.HStack justify="space-between">
+                      <Chakra.VStack align="start" spacing={0}>
+                        <Chakra.Text fontSize="sm" fontWeight="medium">
+                          {entry.materialName}
+                        </Chakra.Text>
+                        <Chakra.Text fontSize="xs" color="gray.600">
+                          {entry.timestamp}
+                        </Chakra.Text>
+                      </Chakra.VStack>
+                      <Chakra.VStack align="end" spacing={0}>
+                        <Chakra.Text fontSize="sm" fontWeight="bold">
+                          {entry.result.toFixed(0)} {entry.units === 'SI' ? 'kW' : 'BTU/s'}
+                        </Chakra.Text>
+                        <Chakra.Text fontSize="xs" color="gray.600">
+                          {entry.burningArea} {entry.units === 'SI' ? 'm²' : 'ft²'}
+                        </Chakra.Text>
+                      </Chakra.VStack>
+                    </Chakra.HStack>
+                  </Chakra.Box>
+                ))}
+              </Chakra.VStack>
+            </Chakra.CardBody>
+          </Chakra.Card>
+        )}
+
+        
+
         {result && (
   <Chakra.Alert status="success">
     <Chakra.AlertIcon />
@@ -268,14 +368,22 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
         </Chakra.Text>
       </Chakra.VStack>
     </Chakra.Box>
-    <Chakra.Button
-      size="sm"
-      colorScheme={copySuccess ? "green" : "blue"}
-      onClick={copyResults}
-      ml={4}
-    >
-      {copySuccess ? "Copied!" : "Copy Results"}
-    </Chakra.Button>
+    <Chakra.VStack>
+      <Chakra.Button
+        size="sm"
+        colorScheme={copySuccess ? "green" : "blue"}
+        onClick={copyResults}
+      >
+        {copySuccess ? "Copied!" : "Copy Results"}
+      </Chakra.Button>
+      <Chakra.Button
+        size="sm"
+        colorScheme="purple"
+        onClick={saveToHistory}
+      >
+        Save to History
+      </Chakra.Button>
+    </Chakra.VStack>
   </Chakra.Alert>
 )}
       </Chakra.VStack>
