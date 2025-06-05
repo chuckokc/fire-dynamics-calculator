@@ -12,6 +12,9 @@ const FlashoverCalculator = () => {
   const [units, setUnits] = useState('imperial');
   const [results, setResults] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  // Add these new states for calculation history
+  const [calculationHistory, setCalculationHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   // Material thermal properties (k in kW/m/K, ρ in kg/m³, c in kJ/kg/K)
   const MATERIALS = {
@@ -43,6 +46,43 @@ const FlashoverCalculator = () => {
       return (numVal * 3.28084).toFixed(2); // m to ft
     }
     return (numVal * 0.3048).toFixed(2);    // ft to m
+  };
+
+  // Function to save calculation to history
+  const saveToHistory = () => {
+    if (!results) return;
+    
+    const newEntry = {
+      id: Date.now(),
+      timestamp: new Date().toLocaleString(),
+      roomHeight: roomHeight,
+      roomWidth: roomWidth,
+      roomLength: roomLength,
+      openingHeight: openingHeight,
+      openingWidth: openingWidth,
+      surfaceMaterial: surfaceMaterial,
+      units: units,
+      results: {
+        mqh: results.mqh,
+        thomas: results.thomas,
+        babrauskas: results.babrauskas
+      }
+    };
+    
+    // Keep only last 10 calculations
+    setCalculationHistory(prev => [newEntry, ...prev].slice(0, 10));
+  };
+
+  // Function to load calculation from history
+  const loadFromHistory = (entry) => {
+    setRoomHeight(entry.roomHeight);
+    setRoomWidth(entry.roomWidth);
+    setRoomLength(entry.roomLength);
+    setOpeningHeight(entry.openingHeight);
+    setOpeningWidth(entry.openingWidth);
+    setSurfaceMaterial(entry.surfaceMaterial);
+    setUnits(entry.units);
+    setShowHistory(false);
   };
 
   const calculateFlashover = () => {
@@ -269,6 +309,95 @@ const FlashoverCalculator = () => {
           </Chakra.VStack>
         </Chakra.FormControl>
 
+        {/* Add history toggle button */}
+        {calculationHistory.length > 0 && (
+          <Chakra.Button
+            variant="outline"
+            onClick={() => setShowHistory(!showHistory)}
+          >
+            {showHistory ? 'Hide' : 'Show'} History ({calculationHistory.length})
+          </Chakra.Button>
+        )}
+
+        {/* History display */}
+        {showHistory && calculationHistory.length > 0 && (
+          <Chakra.Card variant="outline">
+            <Chakra.CardBody>
+              <Chakra.HStack justify="space-between" mb={3}>
+                <Chakra.Text fontWeight="bold">Calculation History</Chakra.Text>
+                <Chakra.Button
+                  size="sm"
+                  colorScheme="red"
+                  variant="ghost"
+                  onClick={() => {
+                    setCalculationHistory([]);
+                    setShowHistory(false);
+                  }}
+                >
+                  Clear All
+                </Chakra.Button>
+              </Chakra.HStack>
+              <Chakra.VStack align="stretch" spacing={2}>
+                {calculationHistory.map((entry) => {
+                  // Get the average of the three methods for coloring
+                  const avgHRR = units === 'SI' 
+                    ? (entry.results.mqh + entry.results.thomas + entry.results.babrauskas) / 3
+                    : ((entry.results.mqh + entry.results.thomas + entry.results.babrauskas) / 3) * 1.055056;
+                  
+                  const hrrColor = avgHRR > 5000 ? 'red' : 
+                                  avgHRR > 2000 ? 'orange' :
+                                  avgHRR > 1000 ? 'yellow' : 'green';
+                  
+                  return (
+                    <Chakra.Box
+                      key={entry.id}
+                      p={3}
+                      borderWidth="1px"
+                      borderRadius="md"
+                      borderLeftWidth="4px"
+                      borderLeftColor={`${hrrColor}.500`}
+                      _hover={{ bg: 'gray.50' }}
+                      cursor="pointer"
+                      onClick={() => loadFromHistory(entry)}
+                    >
+                      <Chakra.HStack justify="space-between">
+                        <Chakra.VStack align="start" spacing={0}>
+                          <Chakra.Text fontSize="sm" fontWeight="medium">
+                            Room: {entry.roomLength}×{entry.roomWidth}×{entry.roomHeight} {entry.units === 'SI' ? 'm' : 'ft'}
+                          </Chakra.Text>
+                          <Chakra.Text fontSize="xs" color="gray.600">
+                            {entry.timestamp}
+                          </Chakra.Text>
+                          <Chakra.Text fontSize="xs" color="gray.500">
+                            Opening: {entry.openingWidth}×{entry.openingHeight} {entry.units === 'SI' ? 'm' : 'ft'}
+                          </Chakra.Text>
+                          <Chakra.Text fontSize="xs" color="gray.500">
+                            {MATERIALS[entry.surfaceMaterial].name}
+                          </Chakra.Text>
+                        </Chakra.VStack>
+                        <Chakra.VStack align="end" spacing={0}>
+                          <Chakra.Text fontSize="xs" fontWeight="bold">
+                            MQH: {entry.results.mqh.toFixed(0)}
+                          </Chakra.Text>
+                          <Chakra.Text fontSize="xs" fontWeight="bold">
+                            Thomas: {entry.results.thomas.toFixed(0)}
+                          </Chakra.Text>
+                          <Chakra.Text fontSize="xs" fontWeight="bold">
+                            Babrauskas: {entry.results.babrauskas.toFixed(0)}
+                          </Chakra.Text>
+                          <Chakra.Text fontSize="xs" color="gray.600">
+                            {entry.units === 'SI' ? 'kW' : 'BTU/s'}
+                          </Chakra.Text>
+                        </Chakra.VStack>
+                      </Chakra.HStack>
+                    </Chakra.Box>
+                  );
+                })}
+              </Chakra.VStack>
+            </Chakra.CardBody>
+          </Chakra.Card>
+        )}
+
         <Chakra.Button
           colorScheme="blue"
           onClick={calculateFlashover}
@@ -294,14 +423,22 @@ const FlashoverCalculator = () => {
         </Chakra.Text>
       </Chakra.VStack>
     </Chakra.Box>
-    <Chakra.Button
-      size="sm"
-      colorScheme={copySuccess ? "green" : "blue"}
-      onClick={copyResults}
-      ml={4}
-    >
-      {copySuccess ? "Copied!" : "Copy Results"}
-    </Chakra.Button>
+    <Chakra.VStack>
+      <Chakra.Button
+        size="sm"
+        colorScheme={copySuccess ? "green" : "blue"}
+        onClick={copyResults}
+      >
+        {copySuccess ? "Copied!" : "Copy Results"}
+      </Chakra.Button>
+      <Chakra.Button
+        size="sm"
+        colorScheme="purple"
+        onClick={saveToHistory}
+      >
+        Save to History
+      </Chakra.Button>
+    </Chakra.VStack>
   </Chakra.Alert>
 )}
       </Chakra.VStack>

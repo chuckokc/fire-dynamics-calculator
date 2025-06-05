@@ -284,6 +284,9 @@ const TSquaredCalculator = () => {
   const [calculateMode, setCalculateMode] = useState('heatRelease'); // 'heatRelease' or 'time'
   const [result, setResult] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  // Add these new states for calculation history
+  const [calculationHistory, setCalculationHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   // Fire growth coefficients (α) in kW/s²
   const growthCoefficients = {
@@ -324,6 +327,42 @@ const TSquaredCalculator = () => {
       return (numVal * 0.947817).toFixed(6); // kW/s² to BTU/s³
     }
     return (numVal * 1.055056).toFixed(6);   // BTU/s³ to kW/s²
+  };
+
+  // Function to save calculation to history
+  const saveToHistory = () => {
+    if (!result || result.error) return;
+    
+    const newEntry = {
+      id: Date.now(),
+      timestamp: new Date().toLocaleString(),
+      time: time,
+      heatRelease: heatRelease,
+      growthRate: growthRate,
+      customAlpha: customAlpha,
+      units: units,
+      calculateMode: calculateMode,
+      result: {
+        value: result.value,
+        type: result.type,
+        unit: result.unit,
+        alpha: result.alpha
+      }
+    };
+    
+    // Keep only last 10 calculations
+    setCalculationHistory(prev => [newEntry, ...prev].slice(0, 10));
+  };
+
+  // Function to load calculation from history
+  const loadFromHistory = (entry) => {
+    setTime(entry.time);
+    setHeatRelease(entry.heatRelease);
+    setGrowthRate(entry.growthRate);
+    setCustomAlpha(entry.customAlpha);
+    setUnits(entry.units);
+    setCalculateMode(entry.calculateMode);
+    setShowHistory(false);
   };
 
   // Calculation function
@@ -552,7 +591,93 @@ const TSquaredCalculator = () => {
   </Chakra.VStack>
 </Chakra.FormControl>
 
-{/* Results */}
+        {/* Add history toggle button */}
+        {calculationHistory.length > 0 && (
+          <Chakra.Button
+            variant="outline"
+            onClick={() => setShowHistory(!showHistory)}
+          >
+            {showHistory ? 'Hide' : 'Show'} History ({calculationHistory.length})
+          </Chakra.Button>
+        )}
+
+        {/* History display */}
+        {showHistory && calculationHistory.length > 0 && (
+          <Chakra.Card variant="outline">
+            <Chakra.CardBody>
+              <Chakra.HStack justify="space-between" mb={3}>
+                <Chakra.Text fontWeight="bold">Calculation History</Chakra.Text>
+                <Chakra.Button
+                  size="sm"
+                  colorScheme="red"
+                  variant="ghost"
+                  onClick={() => {
+                    setCalculationHistory([]);
+                    setShowHistory(false);
+                  }}
+                >
+                  Clear All
+                </Chakra.Button>
+              </Chakra.HStack>
+              <Chakra.VStack align="stretch" spacing={2}>
+                {calculationHistory.map((entry) => {
+                  // Color based on growth rate
+                  const growthColors = {
+                    slow: 'green',
+                    medium: 'yellow',
+                    fast: 'orange',
+                    ultrafast: 'red',
+                    custom: 'purple'
+                  };
+                  const growthColor = growthColors[entry.growthRate] || 'gray';
+                  
+                  return (
+                    <Chakra.Box
+                      key={entry.id}
+                      p={3}
+                      borderWidth="1px"
+                      borderRadius="md"
+                      borderLeftWidth="4px"
+                      borderLeftColor={`${growthColor}.500`}
+                      _hover={{ bg: 'gray.50' }}
+                      cursor="pointer"
+                      onClick={() => loadFromHistory(entry)}
+                    >
+                      <Chakra.HStack justify="space-between">
+                        <Chakra.VStack align="start" spacing={0}>
+                          <Chakra.Text fontSize="sm" fontWeight="medium">
+                            {entry.result.type}: {entry.result.value.toFixed(2)} {entry.result.unit}
+                          </Chakra.Text>
+                          <Chakra.Text fontSize="xs" color="gray.600">
+                            {entry.timestamp}
+                          </Chakra.Text>
+                          <Chakra.Text fontSize="xs" color="gray.500">
+                            Mode: {entry.calculateMode === 'heatRelease' ? 'HRR from time' : 'Time to HRR'}
+                          </Chakra.Text>
+                        </Chakra.VStack>
+                        <Chakra.VStack align="end" spacing={0}>
+                          <Chakra.Text fontSize="sm" fontWeight="bold" textTransform="capitalize">
+                            {entry.growthRate}
+                          </Chakra.Text>
+                          <Chakra.Text fontSize="xs" color="gray.600">
+                            α = {entry.result.alpha.toFixed(5)} kW/s²
+                          </Chakra.Text>
+                          {entry.calculateMode === 'time' && entry.result.value && (
+                            <Chakra.Text fontSize="xs" color="gray.500">
+                              {(entry.result.value / 60).toFixed(1)} min
+                            </Chakra.Text>
+                          )}
+                        </Chakra.VStack>
+                      </Chakra.HStack>
+                    </Chakra.Box>
+                  );
+                })}
+              </Chakra.VStack>
+            </Chakra.CardBody>
+          </Chakra.Card>
+        )}
+
+        {/* Results */}
 {result && (
   result.error ? (
     <Chakra.Alert status="error">
@@ -589,14 +714,22 @@ const TSquaredCalculator = () => {
           )}
         </Chakra.VStack>
       </Chakra.Box>
-      <Chakra.Button
-        size="sm"
-        colorScheme={copySuccess ? "green" : "blue"}
-        onClick={copyResults}
-        ml={4}
-      >
-        {copySuccess ? "Copied!" : "Copy Results"}
-      </Chakra.Button>
+      <Chakra.VStack>
+        <Chakra.Button
+          size="sm"
+          colorScheme={copySuccess ? "green" : "blue"}
+          onClick={copyResults}
+        >
+          {copySuccess ? "Copied!" : "Copy Results"}
+        </Chakra.Button>
+        <Chakra.Button
+          size="sm"
+          colorScheme="purple"
+          onClick={saveToHistory}
+        >
+          Save to History
+        </Chakra.Button>
+      </Chakra.VStack>
     </Chakra.Alert>
   )
 )}

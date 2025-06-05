@@ -158,6 +158,9 @@ const FlameHeightCalculator = () => {
   const [calculateMode, setCalculateMode] = useState('flameHeight'); // What to calculate
   const [result, setResult] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  // Add these new states for calculation history
+  const [calculationHistory, setCalculationHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   // Unit conversion functions
   const convertLength = (value, toImperial) => {
@@ -176,6 +179,39 @@ const FlameHeightCalculator = () => {
       return (numVal * 0.947817).toFixed(2); // kW to BTU/s
     }
     return (numVal * 1.055056).toFixed(2);   // BTU/s to kW
+  };
+
+  // Function to save calculation to history
+  const saveToHistory = () => {
+    if (!result || result.error) return;
+    
+    const newEntry = {
+      id: Date.now(),
+      timestamp: new Date().toLocaleString(),
+      calculateMode: calculateMode,
+      heatRelease: heatRelease,
+      diameter: diameter,
+      flameHeight: flameHeight,
+      units: units,
+      result: {
+        value: result.value,
+        type: result.type,
+        unit: result.unit
+      }
+    };
+    
+    // Keep only last 10 calculations
+    setCalculationHistory(prev => [newEntry, ...prev].slice(0, 10));
+  };
+
+  // Function to load calculation from history
+  const loadFromHistory = (entry) => {
+    setCalculateMode(entry.calculateMode);
+    setHeatRelease(entry.heatRelease);
+    setDiameter(entry.diameter);
+    setFlameHeight(entry.flameHeight);
+    setUnits(entry.units);
+    setShowHistory(false);
   };
 
   // Calculation functions for each mode
@@ -395,6 +431,74 @@ const FlameHeightCalculator = () => {
           </Chakra.VStack>
         </Chakra.FormControl>
 
+        {/* Add history toggle button */}
+        {calculationHistory.length > 0 && (
+          <Chakra.Button
+            variant="outline"
+            onClick={() => setShowHistory(!showHistory)}
+          >
+            {showHistory ? 'Hide' : 'Show'} History ({calculationHistory.length})
+          </Chakra.Button>
+        )}
+
+        {/* History display */}
+        {showHistory && calculationHistory.length > 0 && (
+          <Chakra.Card variant="outline">
+            <Chakra.CardBody>
+              <Chakra.HStack justify="space-between" mb={3}>
+                <Chakra.Text fontWeight="bold">Calculation History</Chakra.Text>
+                <Chakra.Button
+                  size="sm"
+                  colorScheme="red"
+                  variant="ghost"
+                  onClick={() => {
+                    setCalculationHistory([]);
+                    setShowHistory(false);
+                  }}
+                >
+                  Clear All
+                </Chakra.Button>
+              </Chakra.HStack>
+              <Chakra.VStack align="stretch" spacing={2}>
+                {calculationHistory.map((entry) => (
+                  <Chakra.Box
+                    key={entry.id}
+                    p={3}
+                    borderWidth="1px"
+                    borderRadius="md"
+                    _hover={{ bg: 'gray.50' }}
+                    cursor="pointer"
+                    onClick={() => loadFromHistory(entry)}
+                  >
+                    <Chakra.HStack justify="space-between">
+                      <Chakra.VStack align="start" spacing={0}>
+                        <Chakra.Text fontSize="sm" fontWeight="medium">
+                          {entry.result.type}
+                        </Chakra.Text>
+                        <Chakra.Text fontSize="xs" color="gray.600">
+                          {entry.timestamp}
+                        </Chakra.Text>
+                        <Chakra.Text fontSize="xs" color="gray.500">
+                          Mode: {entry.calculateMode === 'flameHeight' ? 'Height' : 
+                                entry.calculateMode === 'heatRelease' ? 'HRR' : 'Diameter'}
+                        </Chakra.Text>
+                      </Chakra.VStack>
+                      <Chakra.VStack align="end" spacing={0}>
+                        <Chakra.Text fontSize="sm" fontWeight="bold">
+                          {entry.result.value.toFixed(2)} {entry.result.unit}
+                        </Chakra.Text>
+                        <Chakra.Text fontSize="xs" color="gray.600">
+                          {entry.units === 'SI' ? 'SI Units' : 'Imperial'}
+                        </Chakra.Text>
+                      </Chakra.VStack>
+                    </Chakra.HStack>
+                  </Chakra.Box>
+                ))}
+              </Chakra.VStack>
+            </Chakra.CardBody>
+          </Chakra.Card>
+        )}
+
         {/* Results */}
 {result && (
   result.error ? (
@@ -424,14 +528,22 @@ const FlameHeightCalculator = () => {
           </Chakra.Text>
         </Chakra.VStack>
       </Chakra.Box>
-      <Chakra.Button
-        size="sm"
-        colorScheme={copySuccess ? "green" : "blue"}
-        onClick={copyResults}
-        ml={4}
-      >
-        {copySuccess ? "Copied!" : "Copy Results"}
-      </Chakra.Button>
+      <Chakra.VStack>
+        <Chakra.Button
+          size="sm"
+          colorScheme={copySuccess ? "green" : "blue"}
+          onClick={copyResults}
+        >
+          {copySuccess ? "Copied!" : "Copy Results"}
+        </Chakra.Button>
+        <Chakra.Button
+          size="sm"
+          colorScheme="purple"
+          onClick={saveToHistory}
+        >
+          Save to History
+        </Chakra.Button>
+      </Chakra.VStack>
     </Chakra.Alert>
   )
 )}

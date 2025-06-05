@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt', // Shows update prompt instead of auto-updating
-      includeAssets: ['icons/*.png'], // Include all icons
+      registerType: 'prompt',
+      includeAssets: ['icons/*.png'],
       manifest: {
         name: 'Fire Dynamics Calculator',
         short_name: 'FireCalc',
@@ -17,6 +17,7 @@ export default defineConfig({
         display: 'standalone',
         scope: '/',
         start_url: '/',
+        version: '1.0.2',  // Add version here
         icons: [
           {
             src: '/icons/icon-192x192.png',
@@ -42,29 +43,37 @@ export default defineConfig({
         ]
       },
       workbox: {
-        // Don't cache during development
-        navigateFallback: null,
-        // Clean old caches
-        cleanupOutdatedCaches: true,
-        // Skip waiting - activate new service worker immediately
-        skipWaiting: false, // false = user controls updates
-        clientsClaim: true,
-        // What to cache
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2}'],
-        // Runtime caching for external resources
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
-              }
-            }
-          }
-        ]
+  navigateFallback: null,
+  cleanupOutdatedCaches: true,
+  skipWaiting: false,
+  clientsClaim: true,
+  globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2}'],
+  maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+  dontCacheBustURLsMatching: /\.\w{8}\./,
+  // Add this to ignore chrome extension URLs
+  navigateFallbackDenylist: [/^\/api/, /^chrome-extension:/, /^moz-extension:/],
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'google-fonts-cache',
+        expiration: {
+          maxEntries: 10,
+          maxAgeSeconds: 60 * 60 * 24 * 365
+        }
+      }
+    },
+    // Add this to explicitly exclude extension URLs
+    {
+      urlPattern: /^chrome-extension:/,
+      handler: 'NetworkOnly'
+    }
+  ]
+},
+      // Add this section to show update UI
+      devOptions: {
+        enabled: false  // Set to true during development to test
       }
     })
   ],

@@ -175,6 +175,9 @@ const PointSourceCalculator = () => {
   const [units, setUnits] = useState('imperial');
   const [result, setResult] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  // Add these new states for calculation history
+  const [calculationHistory, setCalculationHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
 
  // Critical heat flux values from NFPA 921 (2024 ed.) Table 5.5.4.2 + SCBA research
   const CRITICAL_HEAT_FLUX = {
@@ -240,6 +243,35 @@ const PointSourceCalculator = () => {
       return numVal * 0.088055; // kW/m² to BTU/ft²/s
     }
     return numVal * 11.356; // BTU/ft²/s to kW/m²
+  };
+
+  // Function to save calculation to history
+  const saveToHistory = () => {
+    if (!result) return;
+    
+    const newEntry = {
+      id: Date.now(),
+      timestamp: new Date().toLocaleString(),
+      heatRelease: heatRelease,
+      distance: distance,
+      radiativeFraction: radiativeFraction,
+      units: units,
+      result: result,
+      // Store actual flux value in SI for comparison
+      fluxKW: units === 'imperial' ? convertHeatFlux(result, false) : result
+    };
+    
+    // Keep only last 10 calculations
+    setCalculationHistory(prev => [newEntry, ...prev].slice(0, 10));
+  };
+
+  // Function to load calculation from history
+  const loadFromHistory = (entry) => {
+    setHeatRelease(entry.heatRelease);
+    setDistance(entry.distance);
+    setRadiativeFraction(entry.radiativeFraction);
+    setUnits(entry.units);
+    setShowHistory(false);
   };
 
   // Calculation function
@@ -399,6 +431,83 @@ const PointSourceCalculator = () => {
           </Chakra.VStack>
         </Chakra.FormControl>
 
+        {/* Add history toggle button */}
+        {calculationHistory.length > 0 && (
+          <Chakra.Button
+            variant="outline"
+            onClick={() => setShowHistory(!showHistory)}
+          >
+            {showHistory ? 'Hide' : 'Show'} History ({calculationHistory.length})
+          </Chakra.Button>
+        )}
+
+        {/* History display */}
+        {showHistory && calculationHistory.length > 0 && (
+          <Chakra.Card variant="outline">
+            <Chakra.CardBody>
+              <Chakra.HStack justify="space-between" mb={3}>
+                <Chakra.Text fontWeight="bold">Calculation History</Chakra.Text>
+                <Chakra.Button
+                  size="sm"
+                  colorScheme="red"
+                  variant="ghost"
+                  onClick={() => {
+                    setCalculationHistory([]);
+                    setShowHistory(false);
+                  }}
+                >
+                  Clear All
+                </Chakra.Button>
+              </Chakra.HStack>
+              <Chakra.VStack align="stretch" spacing={2}>
+                {calculationHistory.map((entry) => {
+                  // Determine status based on flux value
+                  const fluxStatus = entry.fluxKW >= 20 ? 'red' : 
+                                   entry.fluxKW >= 5 ? 'orange' :
+                                   entry.fluxKW >= 4.5 ? 'yellow' :
+                                   entry.fluxKW >= 1.7 ? 'green' : 'gray';
+                  
+                  return (
+                    <Chakra.Box
+                      key={entry.id}
+                      p={3}
+                      borderWidth="1px"
+                      borderRadius="md"
+                      borderLeftWidth="4px"
+                      borderLeftColor={`${fluxStatus}.500`}
+                      _hover={{ bg: 'gray.50' }}
+                      cursor="pointer"
+                      onClick={() => loadFromHistory(entry)}
+                    >
+                      <Chakra.HStack justify="space-between">
+                        <Chakra.VStack align="start" spacing={0}>
+                          <Chakra.Text fontSize="sm" fontWeight="medium">
+                            {entry.result.toFixed(2)} {entry.units === 'SI' ? 'kW/m²' : 'BTU/ft²/s'}
+                          </Chakra.Text>
+                          <Chakra.Text fontSize="xs" color="gray.600">
+                            {entry.timestamp}
+                          </Chakra.Text>
+                          <Chakra.Text fontSize="xs" color="gray.500">
+                            @ {entry.distance} {entry.units === 'SI' ? 'm' : 'ft'}
+                          </Chakra.Text>
+                        </Chakra.VStack>
+                        <Chakra.VStack align="end" spacing={0}>
+                          <Chakra.Text fontSize="sm" fontWeight="bold">
+                            {entry.heatRelease} {entry.units === 'SI' ? 'kW' : 'BTU/s'}
+                          </Chakra.Text>
+                          <Chakra.Text fontSize="xs" color="gray.600">
+                            χᵣ = {entry.radiativeFraction}
+                          </Chakra.Text>
+                        </Chakra.VStack>
+                      </Chakra.HStack>
+                    </Chakra.Box>
+                  );
+                })}
+              </Chakra.VStack>
+            </Chakra.CardBody>
+          </Chakra.Card>
+        )}
+
         <Chakra.Button
           colorScheme="blue"
           onClick={calculateHeatFlux}
@@ -427,14 +536,22 @@ const PointSourceCalculator = () => {
           </Chakra.Text>
         </Chakra.VStack>
       </Chakra.Box>
-      <Chakra.Button
-        size="sm"
-        colorScheme={copySuccess ? "green" : "blue"}
-        onClick={copyResults}
-        ml={4}
-      >
-        {copySuccess ? "Copied!" : "Copy Results"}
-      </Chakra.Button>
+      <Chakra.VStack>
+        <Chakra.Button
+          size="sm"
+          colorScheme={copySuccess ? "green" : "blue"}
+          onClick={copyResults}
+        >
+          {copySuccess ? "Copied!" : "Copy Results"}
+        </Chakra.Button>
+        <Chakra.Button
+          size="sm"
+          colorScheme="purple"
+          onClick={saveToHistory}
+        >
+          Save to History
+        </Chakra.Button>
+      </Chakra.VStack>
     </Chakra.Alert>
 
     <Chakra.Card width="100%">

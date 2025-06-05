@@ -8,12 +8,20 @@ import FlashoverCalculator from './components/calculators/FlashoverCalculator';
 import ReferenceGuide from './components/reference/ReferenceGuide';
 import Authentication from './components/Authentication';
 import TSquaredCalculator from './components/calculators/TSquaredCalculator';
+// Add this import
+import { useRegisterSW } from 'virtual:pwa-register/react';
 
 // MainApp component contains all calculator functionality and the main interface
 const MainApp = () => {
   // Theme colors that adapt to light/dark mode
   const bgColor = Chakra.useColorModeValue('gray.50', 'gray.800');
   const borderColor = Chakra.useColorModeValue('gray.200', 'gray.600');
+
+  // Add PWA update handling
+  const {
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
+  } = useRegisterSW();
 
   // Handler for feedback button clicks - opens email client
   const handleFeedbackClick = () => {
@@ -22,6 +30,29 @@ const MainApp = () => {
 
   return (
     <Chakra.Box minH="100vh" bg={bgColor}>
+      {/* PWA Update Prompt */}
+      {needRefresh && (
+        <Chakra.Box position="fixed" bottom={4} right={4} zIndex={9999}>
+          <Chakra.Alert status="info" variant="solid" borderRadius="md" boxShadow="lg">
+            <Chakra.AlertIcon />
+            <Chakra.Box flex="1">
+              <Chakra.AlertTitle>Update available!</Chakra.AlertTitle>
+              <Chakra.AlertDescription>
+                A new version of Fire Dynamics Calculator is ready.
+              </Chakra.AlertDescription>
+            </Chakra.Box>
+            <Chakra.Button
+              colorScheme="blue"
+              size="sm"
+              ml={3}
+              onClick={() => updateServiceWorker(true)}
+            >
+              Update
+            </Chakra.Button>
+          </Chakra.Alert>
+        </Chakra.Box>
+      )}
+
       <Chakra.Container maxW="container.xl" py={8}>
         {/* Header section with title, description, and feedback button */}
         <Chakra.VStack spacing={2} align="stretch" mb={8}>
