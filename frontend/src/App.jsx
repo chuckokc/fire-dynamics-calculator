@@ -75,7 +75,8 @@ const MainApp = () => {
               <Chakra.VStack spacing={4} align="stretch">
                 <Chakra.Heading size="md">Flame Height Calculator</Chakra.Heading>
                 <Chakra.Text color="gray.600" fontSize="sm">
-                  Calculates flame height using Heskestad's Correlation.
+                  Calculates flame height using Heskestad's Correlation. Use for a single fuel item or package.
+                  DO NOT USE IN A ROOM THAT HAS BEEN THROUGH FLASHOVER OR FULL INVOLVEMENT!
                                   </Chakra.Text>
                 <Chakra.Center py={4}>
                   <FlameHeightCalculator />
