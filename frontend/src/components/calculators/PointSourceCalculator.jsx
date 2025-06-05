@@ -3,6 +3,9 @@ import * as Chakra from '@chakra-ui/react';
 
 // Radiation Zone Visual Component
 const RadiationZoneVisual = ({ heatRelease, distance, radiativeFraction, units }) => {
+  // Add these at the beginning
+  const bgColor = Chakra.useColorModeValue('gray.50', 'gray.700');
+  const boxBgColor = Chakra.useColorModeValue('white', 'gray.800');
   // Zones ordered from lowest to highest flux
   const zones = [
     { name: 'Tenability Limit', flux: 1.7, color: 'green.500' },
@@ -36,17 +39,16 @@ const RadiationZoneVisual = ({ heatRelease, distance, radiativeFraction, units }
   // Calculate current heat flux at specified distance
   const currentFlux = R > 0 ? (Q * Xr) / (4 * Math.PI * Math.pow(R, 2)) : 0;
 
-  return (
-    <Chakra.Box p={4} bg="gray.50" borderRadius="md">
+   return (
+    <Chakra.Box p={4} bg={bgColor} borderRadius="md">
       <Chakra.Text fontWeight="bold" mb={3}>Radiation Zone Visualization</Chakra.Text>
       
       <Chakra.HStack align="start" spacing={4}>
-        {/* Visualization */}
         <Chakra.Box 
           position="relative" 
           h="400px" 
           w="400px"
-          bg="white" 
+          bg={boxBgColor}  // Changed from "white"
           borderRadius="md" 
           overflow="hidden"
           display="flex"
@@ -120,7 +122,7 @@ const RadiationZoneVisual = ({ heatRelease, distance, radiativeFraction, units }
         )}
 
         {/* Distance indicator */}
-        <Chakra.Box position="absolute" bottom={6} right={6} bg="white" p={2} borderRadius="md" boxShadow="md">
+        <Chakra.Box position="absolute" bottom={6} right={6} bg={boxBgColor} p={2} borderRadius="md" boxShadow="md">
           <Chakra.Text fontSize="xs" color="gray.600">
             Distance: {distance} {units === 'imperial' ? 'ft' : 'm'}
           </Chakra.Text>
@@ -128,7 +130,7 @@ const RadiationZoneVisual = ({ heatRelease, distance, radiativeFraction, units }
       </Chakra.Box>
       
       {/* Zone legend - moved outside */}
-      <Chakra.Box bg="white" p={3} borderRadius="md" boxShadow="md" minW="200px">
+      <Chakra.Box bg={boxBgColor} p={3} borderRadius="md" boxShadow="md" minW="200px">
         <Chakra.VStack align="start" spacing={1}>
           <Chakra.Text fontSize="xs" fontWeight="bold" mb={1}>
             Heat Flux Zones:
@@ -475,7 +477,7 @@ const PointSourceCalculator = () => {
                       borderRadius="md"
                       borderLeftWidth="4px"
                       borderLeftColor={`${fluxStatus}.500`}
-                      _hover={{ bg: 'gray.50' }}
+                      _hover={{ bg: Chakra.useColorModeValue('gray.50', 'gray.700') }}
                       cursor="pointer"
                       onClick={() => loadFromHistory(entry)}
                     >

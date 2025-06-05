@@ -3,6 +3,9 @@ import * as Chakra from '@chakra-ui/react';
 
 // Visual Flame Height Indicator Component
 const FlameHeightVisual = ({ flameHeight, units }) => {
+  // Add this at the beginning of the component
+  const bgColor = Chakra.useColorModeValue('gray.50', 'gray.700');
+  const boxBgColor = Chakra.useColorModeValue('white', 'gray.800');
   // Reference heights in meters with styling
   const references = [
     { 
@@ -48,11 +51,11 @@ const FlameHeightVisual = ({ flameHeight, units }) => {
   // Calculate percentage heights
   const flamePercent = Math.min((flameHeightM / maxHeight) * 100, 100);
   
-  return (
-    <Chakra.Box p={4} bg="gray.50" borderRadius="md">
+   return (
+    <Chakra.Box p={4} bg={bgColor} borderRadius="md">
       <Chakra.Text fontWeight="bold" mb={3}>Flame Height Visualization</Chakra.Text>
       
-      <Chakra.Box position="relative" h="250px" bg="white" borderRadius="md" p={4}>
+      <Chakra.Box position="relative" h="250px" bg={boxBgColor} borderRadius="md" p={4}>
         {/* Reference lines */}
         {references.map((ref, index) => {
           const refPercent = (ref.heightM / maxHeight) * 100;
@@ -82,7 +85,7 @@ const FlameHeightVisual = ({ flameHeight, units }) => {
                 fontSize="12px"
                 color={ref.color}
                 fontWeight="bold"
-                bg="white"
+                bg={boxBgColor}
                 px={1}
                 borderRadius="sm"
                 border="1px solid"
@@ -158,7 +161,6 @@ const FlameHeightCalculator = () => {
   const [calculateMode, setCalculateMode] = useState('flameHeight'); // What to calculate
   const [result, setResult] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
-  // Add these new states for calculation history
   const [calculationHistory, setCalculationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
 
@@ -466,7 +468,7 @@ const FlameHeightCalculator = () => {
                     p={3}
                     borderWidth="1px"
                     borderRadius="md"
-                    _hover={{ bg: 'gray.50' }}
+                    _hover={{ bg: Chakra.useColorModeValue('gray.50', 'gray.700') }}
                     cursor="pointer"
                     onClick={() => loadFromHistory(entry)}
                   >

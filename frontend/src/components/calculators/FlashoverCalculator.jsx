@@ -356,7 +356,7 @@ const FlashoverCalculator = () => {
                       borderRadius="md"
                       borderLeftWidth="4px"
                       borderLeftColor={`${hrrColor}.500`}
-                      _hover={{ bg: 'gray.50' }}
+                      _hover={{ bg: Chakra.useColorModeValue('gray.50', 'gray.700') }}
                       cursor="pointer"
                       onClick={() => loadFromHistory(entry)}
                     >

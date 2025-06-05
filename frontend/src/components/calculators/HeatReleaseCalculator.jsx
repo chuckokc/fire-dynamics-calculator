@@ -315,7 +315,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
                     p={3}
                     borderWidth="1px"
                     borderRadius="md"
-                    _hover={{ bg: 'gray.50' }}
+                    _hover={{ bg: Chakra.useColorModeValue('gray.50', 'gray.700') }}
                     cursor="pointer"
                     onClick={() => loadFromHistory(entry)}
                   >

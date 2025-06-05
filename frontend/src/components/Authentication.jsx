@@ -13,11 +13,14 @@ import {
   IconButton,
   Link,
   HStack,
-  Divider
+  Divider,
+  useColorModeValue  // Add this import
 } from '@chakra-ui/react';
 import { Eye, EyeOff, Mail } from 'lucide-react';
 
 const Authentication = ({ onAuthenticated }) => {
+  const bgColor = useColorModeValue('gray.50', 'gray.900');
+  const cardBgColor = useColorModeValue('white', 'gray.800');
   const [accessCode, setAccessCode] = useState('');
   const [showCode, setShowCode] = useState(false);
   const toast = useToast();
@@ -62,13 +65,13 @@ const Authentication = ({ onAuthenticated }) => {
   };
 
   return (
-    <Container maxW="100vw" h="100vh" bg="gray.50" centerContent>
+    <Container maxW="lg" py={10} minH="100vh" bg={bgColor}>
       <Box 
         w="full" 
         maxW="md" 
         p={8} 
         mt={20} 
-        bg="white" 
+        bg={cardBgColor}  // Changed from "white"
         borderRadius="lg" 
         boxShadow="lg"
         textAlign="center"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
-import { Mail } from 'lucide-react';
+import { Mail, Sun, Moon } from 'lucide-react';
 import HeatReleaseCalculator from './components/calculators/HeatReleaseCalculator';
 import FlameHeightCalculator from './components/calculators/FlameHeightCalculator';
 import PointSourceCalculator from './components/calculators/PointSourceCalculator';
@@ -8,12 +8,14 @@ import FlashoverCalculator from './components/calculators/FlashoverCalculator';
 import ReferenceGuide from './components/reference/ReferenceGuide';
 import Authentication from './components/Authentication';
 import TSquaredCalculator from './components/calculators/TSquaredCalculator';
-// Add this import
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { ColorModeScript } from '@chakra-ui/react';
+import theme from './theme';
 
 // MainApp component contains all calculator functionality and the main interface
 const MainApp = () => {
   // Theme colors that adapt to light/dark mode
+  const { colorMode, toggleColorMode } = Chakra.useColorMode();
   const bgColor = Chakra.useColorModeValue('gray.50', 'gray.800');
   const borderColor = Chakra.useColorModeValue('gray.200', 'gray.600');
 
@@ -64,15 +66,25 @@ const MainApp = () => {
               </Chakra.Text>
             </Chakra.VStack>
             
-            <Chakra.Button
-              leftIcon={<Mail size={16} />}
-              variant="ghost"
-              size="sm"
-              onClick={handleFeedbackClick}
-              colorScheme="blue"
-            >
-              Provide Feedback
-            </Chakra.Button>
+            <Chakra.HStack spacing={2}>
+              <Chakra.Text fontSize="xs" color="gray.500">v1.2.0</Chakra.Text>
+              <Chakra.IconButton
+                icon={colorMode === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+                variant="ghost"
+                size="sm"
+                onClick={toggleColorMode}
+                aria-label="Toggle dark mode"
+              />
+              <Chakra.Button
+                leftIcon={<Mail size={16} />}
+                variant="ghost"
+                size="sm"
+                onClick={handleFeedbackClick}
+                colorScheme="blue"
+              >
+                Provide Feedback
+              </Chakra.Button>
+            </Chakra.HStack>
           </Chakra.Flex>
         </Chakra.VStack>
 
@@ -177,7 +189,6 @@ const MainApp = () => {
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Check authentication status when the app loads
   useEffect(() => {
     const authStatus = localStorage.getItem('fireCalcAuth');
     if (authStatus === 'granted') {
@@ -186,13 +197,16 @@ function App() {
   }, []);
 
   return (
-    <Chakra.ChakraProvider>
-      {!isAuthenticated ? (
-        <Authentication onAuthenticated={setIsAuthenticated} />
-      ) : (
-        <MainApp />
-      )}
-    </Chakra.ChakraProvider>
+    <>
+      <ColorModeScript initialColorMode={theme.config.initialColorMode} />
+      <Chakra.ChakraProvider theme={theme}>
+        {!isAuthenticated ? (
+          <Authentication onAuthenticated={setIsAuthenticated} />
+        ) : (
+          <MainApp />
+        )}
+      </Chakra.ChakraProvider>
+    </>
   );
 }
 

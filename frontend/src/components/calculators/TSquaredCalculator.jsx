@@ -3,6 +3,11 @@ import * as Chakra from '@chakra-ui/react';
 
 // T-Squared Growth Curve Visual Component
 const TSquaredVisual = ({ time, heatRelease, growthRate, calculateMode, units, customAlpha }) => {
+  // Add these at the beginning of the component
+  const bgColor = Chakra.useColorModeValue('gray.50', 'gray.700');
+  const boxBgColor = Chakra.useColorModeValue('white', 'gray.800');
+  const textColor = Chakra.useColorModeValue('black', 'white');
+  const gridColor = Chakra.useColorModeValue('gray', 'gray.600');
   // Growth coefficients with actual color values for SVG
   const coefficients = {
     slow: { alpha: 0.00293, color: '#48BB78' },      // green
@@ -57,15 +62,15 @@ const TSquaredVisual = ({ time, heatRelease, growthRate, calculateMode, units, c
     { value: 5000, label: '5 MW', color: '#6B46C1' }     // darker purple
   ].filter(ref => ref.value <= maxHRR);
 
-  return (
-    <Chakra.Box p={4} bg="gray.50" borderRadius="md">
+   return (
+    <Chakra.Box p={4} bg={bgColor} borderRadius="md">
       <Chakra.Text fontWeight="bold" mb={3}>Fire Growth Curves</Chakra.Text>
       
-      <Chakra.Box bg="white" borderRadius="md" p={4}>
+      <Chakra.Box bg={boxBgColor} borderRadius="md" p={4}>
         <svg width={graphWidth} height={graphHeight}>
           {/* Grid lines */}
           <g opacity="0.2">
-            {/* Vertical grid lines */}
+            {/* Update the stroke color for grid lines */}
             {[0, 1, 2, 3, 4, 5].map(i => {
               const x = padding + (i / 5) * plotWidth;
               return (
@@ -75,7 +80,7 @@ const TSquaredVisual = ({ time, heatRelease, growthRate, calculateMode, units, c
                   y1={padding}
                   x2={x}
                   y2={padding + plotHeight}
-                  stroke="gray"
+                  stroke={gridColor}  // Changed from "gray"
                   strokeWidth="1"
                 />
               );
@@ -164,7 +169,7 @@ const TSquaredVisual = ({ time, heatRelease, growthRate, calculateMode, units, c
             y1={padding + plotHeight}
             x2={padding + plotWidth}
             y2={padding + plotHeight}
-            stroke="black"
+            stroke={textColor}  // Changed from "black"
             strokeWidth="2"
           />
           <line
@@ -172,7 +177,7 @@ const TSquaredVisual = ({ time, heatRelease, growthRate, calculateMode, units, c
             y1={padding}
             x2={padding}
             y2={padding + plotHeight}
-            stroke="black"
+            stroke={textColor}  // Changed from "black"
             strokeWidth="2"
           />
 
@@ -189,7 +194,7 @@ const TSquaredVisual = ({ time, heatRelease, growthRate, calculateMode, units, c
           )}
 
           {/* Axis labels */}
-          <text x={graphWidth / 2} y={graphHeight - 5} textAnchor="middle" fontSize="12">
+          <text x={graphWidth / 2} y={graphHeight - 5} textAnchor="middle" fontSize="12" fill={textColor}>
             Time (seconds)
           </text>
           <text
@@ -262,7 +267,7 @@ const TSquaredVisual = ({ time, heatRelease, growthRate, calculateMode, units, c
 
         {/* Current values display */}
         {currentTime > 0 && currentHRR > 0 && (
-          <Chakra.Box mt={3} p={2} bg="gray.50" borderRadius="md">
+          <Chakra.Box mt={3} p={2} bg={Chakra.useColorModeValue('gray.50', 'gray.700')} borderRadius="md">
             <Chakra.Text fontSize="sm" textAlign="center">
               Current Point: {currentTime.toFixed(0)}s → {currentHRR.toFixed(0)} kW
               {units === 'imperial' && ` (${(currentHRR * 0.947817).toFixed(0)} BTU/s)`}
@@ -481,7 +486,7 @@ const TSquaredCalculator = () => {
         </Chakra.Card>
 
         {/* Growth Rate Coefficients Reference */}
-        <Chakra.Card variant="outline" bg="gray.50">
+        <Chakra.Card variant="outline" bg={Chakra.useColorModeValue('gray.50', 'gray.700')}>
           <Chakra.CardBody>
             <Chakra.Text fontSize="md" fontWeight="bold" mb={2}>Standard Growth Rate Coefficients:</Chakra.Text>
             <Chakra.SimpleGrid columns={2} spacing={2} fontSize="sm">
@@ -639,7 +644,7 @@ const TSquaredCalculator = () => {
                       borderRadius="md"
                       borderLeftWidth="4px"
                       borderLeftColor={`${growthColor}.500`}
-                      _hover={{ bg: 'gray.50' }}
+                      _hover={{ bg: Chakra.useColorModeValue('gray.50', 'gray.700') }}
                       cursor="pointer"
                       onClick={() => loadFromHistory(entry)}
                     >
