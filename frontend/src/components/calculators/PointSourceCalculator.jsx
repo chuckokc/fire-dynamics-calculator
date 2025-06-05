@@ -39,132 +39,160 @@ const RadiationZoneVisual = ({ heatRelease, distance, radiativeFraction, units }
   // Calculate current heat flux at specified distance
   const currentFlux = R > 0 ? (Q * Xr) / (4 * Math.PI * Math.pow(R, 2)) : 0;
 
-   return (
+  return (
     <Chakra.Box p={4} bg={bgColor} borderRadius="md">
       <Chakra.Text fontWeight="bold" mb={3}>Radiation Zone Visualization</Chakra.Text>
       
-      <Chakra.HStack align="start" spacing={4}>
+      <Chakra.Stack 
+        direction={{ base: "column", md: "row" }} 
+        align={{ base: "center", md: "start" }} 
+        spacing={4}
+      >
         <Chakra.Box 
           position="relative" 
-          h="400px" 
-          w="400px"
-          bg={boxBgColor}  // Changed from "white"
+          w={{ base: "100%", sm: "400px" }}
+          maxW="400px"
+          h={{ base: "300px", sm: "400px" }}
+          bg={boxBgColor}
           borderRadius="md" 
           overflow="hidden"
           display="flex"
           alignItems="center"
           justifyContent="center"
         >
-        {/* Zone circles - draw from smallest flux (largest radius) to largest flux (smallest radius) */}
-        {zones.map((zone) => {
-          const radius = calculateRadius(zone.flux) * scale;
-          return (
-            <Chakra.Box
-              key={zone.name}
-              position="absolute"
-              w={`${radius * 2}px`}
-              h={`${radius * 2}px`}
-              borderRadius="full"
-              borderWidth="4px"
-              borderStyle="solid"
-              borderColor={zone.color}
-              bg={zone.flux === 20 ? 'red.100' : zone.flux === 5 ? 'orange.100' : zone.flux === 4.5 ? 'yellow.100' : zone.flux === 1.7 ? 'green.100' : 'gray.100'}
-              opacity={0.8}
-              transition="all 0.3s ease"
-            />
-          );
-        })}
-
-        {/* Fire source at center */}
-        <Chakra.Box
-          position="absolute"
-          w="40px"
-          h="40px"
-          bg="red.500"
-          borderRadius="full"
-          boxShadow="0 0 30px rgba(255, 0, 0, 0.8)"
-          zIndex={10}
-        >
-          <Chakra.Text fontSize="24px" position="absolute" top="-6px" left="8px">
-            🔥
-          </Chakra.Text>
-        </Chakra.Box>
-
-        {/* Person at specified distance */}
-        {R > 0 && (
-          <Chakra.Box
-            position="absolute"
-            left="50%"
-            top="50%"
-            transform={`translate(-50%, -50%) translateX(${R * scale}px)`}
-            zIndex={20}
-          >
-            <Chakra.Text fontSize="30px">
-              🧍
-            </Chakra.Text>
-            <Chakra.Box
-              position="absolute"
-              top="-30px"
-              left="50%"
-              transform="translateX(-50%)"
-              bg={currentFlux > 20 ? 'red.600' : currentFlux > 5 ? 'orange.500' : currentFlux > 4.5 ? 'yellow.500' : currentFlux > 1.7 ? 'green.500' : 'green.400'}
-              color="white"
-              px={2}
-              py={1}
-              borderRadius="md"
-              fontSize="xs"
-              fontWeight="bold"
-              whiteSpace="nowrap"
-            >
-              {currentFlux.toFixed(1)} kW/m²
-            </Chakra.Box>
-          </Chakra.Box>
-        )}
-
-        {/* Distance indicator */}
-        <Chakra.Box position="absolute" bottom={6} right={6} bg={boxBgColor} p={2} borderRadius="md" boxShadow="md">
-          <Chakra.Text fontSize="xs" color="gray.600">
-            Distance: {distance} {units === 'imperial' ? 'ft' : 'm'}
-          </Chakra.Text>
-        </Chakra.Box>
-      </Chakra.Box>
-      
-      {/* Zone legend - moved outside */}
-      <Chakra.Box bg={boxBgColor} p={3} borderRadius="md" boxShadow="md" minW="200px">
-        <Chakra.VStack align="start" spacing={1}>
-          <Chakra.Text fontSize="xs" fontWeight="bold" mb={1}>
-            Heat Flux Zones:
-          </Chakra.Text>
+          {/* Zone circles - draw from smallest flux (largest radius) to largest flux (smallest radius) */}
           {zones.map((zone) => {
-            const radius = calculateRadius(zone.flux);
-            const displayRadius = units === 'imperial' ? 
-              (radius * 3.28084).toFixed(1) : 
-              radius.toFixed(1);
-            const unitLabel = units === 'imperial' ? 'ft' : 'm';
-            
+            const radius = calculateRadius(zone.flux) * scale;
+            const size = `${radius * 2}px`;
             return (
-              <Chakra.HStack key={zone.name} spacing={2} align="center">
-                <Chakra.Box 
-                  w="12px" 
-                  h="12px" 
-                  bg={zone.color} 
-                  borderRadius="sm"
-                  flexShrink={0}
-                />
-                <Chakra.Text fontSize="11px" fontWeight="medium">
-                  {zone.flux} kW/m² - {zone.name}
-                  {zone.flux === 5 && (
-                    <Chakra.Text as="span" fontSize="10px" color="gray.600">
-                      {' '}(lens damage)
-                    </Chakra.Text>
-                  )}
-                </Chakra.Text>
-              </Chakra.HStack>
+              <Chakra.Box
+                key={zone.name}
+                position="absolute"
+                w={size}
+                h={size}
+                maxW="90%"
+                maxH="90%"
+                borderRadius="full"
+                borderWidth="4px"
+                borderStyle="solid"
+                borderColor={zone.color}
+                bg={zone.flux === 20 ? 'red.100' : zone.flux === 5 ? 'orange.100' : zone.flux === 4.5 ? 'yellow.100' : zone.flux === 1.7 ? 'green.100' : 'gray.100'}
+                opacity={0.8}
+                transition="all 0.3s ease"
+              />
             );
           })}
-        </Chakra.VStack>
-      </Chakra.Box>
-      </Chakra.HStack>
+
+          {/* Fire source at center */}
+          <Chakra.Box
+            position="absolute"
+            w={{ base: "30px", sm: "40px" }}
+            h={{ base: "30px", sm: "40px" }}
+            bg="red.500"
+            borderRadius="full"
+            boxShadow="0 0 30px rgba(255, 0, 0, 0.8)"
+            zIndex={10}
+          >
+            <Chakra.Text 
+              fontSize={{ base: "18px", sm: "24px" }} 
+              position="absolute" 
+              top={{ base: "-4px", sm: "-6px" }} 
+              left={{ base: "6px", sm: "8px" }}
+            >
+              🔥
+            </Chakra.Text>
+          </Chakra.Box>
+
+          {/* Person at specified distance */}
+          {R > 0 && (
+            <Chakra.Box
+              position="absolute"
+              left="50%"
+              top="50%"
+              transform={`translate(-50%, -50%) translateX(${Math.min(R * scale, 140)}px)`}
+              zIndex={20}
+            >
+              <Chakra.Text fontSize={{ base: "24px", sm: "30px" }}>
+                🧍
+              </Chakra.Text>
+              <Chakra.Box
+                position="absolute"
+                top={{ base: "-25px", sm: "-30px" }}
+                left="50%"
+                transform="translateX(-50%)"
+                bg={currentFlux > 20 ? 'red.600' : currentFlux > 5 ? 'orange.500' : currentFlux > 4.5 ? 'yellow.500' : currentFlux > 1.7 ? 'green.500' : 'green.400'}
+                color="white"
+                px={2}
+                py={1}
+                borderRadius="md"
+                fontSize={{ base: "10px", sm: "xs" }}
+                fontWeight="bold"
+                whiteSpace="nowrap"
+              >
+                {currentFlux.toFixed(1)} kW/m²
+              </Chakra.Box>
+            </Chakra.Box>
+          )}
+
+          {/* Distance indicator */}
+          <Chakra.Box 
+            position="absolute" 
+            bottom={{ base: 4, sm: 6 }} 
+            right={{ base: 4, sm: 6 }} 
+            bg={boxBgColor} 
+            p={2} 
+            borderRadius="md" 
+            boxShadow="md"
+          >
+            <Chakra.Text fontSize={{ base: "10px", sm: "xs" }} color="gray.600">
+              Distance: {distance} {units === 'imperial' ? 'ft' : 'm'}
+            </Chakra.Text>
+          </Chakra.Box>
+        </Chakra.Box>
+        
+        {/* Zone legend - moved outside */}
+        <Chakra.Box 
+          bg={boxBgColor} 
+          p={3} 
+          borderRadius="md" 
+          boxShadow="md" 
+          w={{ base: "100%", md: "auto" }}
+          minW={{ base: "100%", md: "200px" }}
+        >
+          <Chakra.VStack align="start" spacing={1}>
+            <Chakra.Text fontSize={{ base: "xs", sm: "xs" }} fontWeight="bold" mb={1}>
+              Heat Flux Zones:
+            </Chakra.Text>
+            {zones.map((zone) => {
+              const radius = calculateRadius(zone.flux);
+              const displayRadius = units === 'imperial' ? 
+                (radius * 3.28084).toFixed(1) : 
+                radius.toFixed(1);
+              const unitLabel = units === 'imperial' ? 'ft' : 'm';
+              
+              return (
+                <Chakra.HStack key={zone.name} spacing={2} align="center">
+                  <Chakra.Box 
+                    w="12px" 
+                    h="12px" 
+                    bg={zone.color} 
+                    borderRadius="sm"
+                    flexShrink={0}
+                  />
+                  <Chakra.Text fontSize={{ base: "10px", sm: "11px" }} fontWeight="medium">
+                    {zone.flux} kW/m² - {zone.name}
+                    {zone.flux === 5 && (
+                      <Chakra.Text as="span" fontSize={{ base: "9px", sm: "10px" }} color="gray.600">
+                        {' '}(lens damage)
+                      </Chakra.Text>
+                    )}
+                  </Chakra.Text>
+                </Chakra.HStack>
+              );
+            })}
+          </Chakra.VStack>
+        </Chakra.Box>
+      </Chakra.Stack>
     </Chakra.Box>
   );
 };
@@ -181,7 +209,7 @@ const PointSourceCalculator = () => {
   const [calculationHistory, setCalculationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
 
- // Critical heat flux values from NFPA 921 (2024 ed.) Table 5.5.4.2 + SCBA research
+  // Critical heat flux values from NFPA 921 (2024 ed.) Table 5.5.4.2 + SCBA research
   const CRITICAL_HEAT_FLUX = {
     'postflashover': { value: 170, description: 'Maximum in postflashover compartment' },
     'protective_clothing': { value: 80, description: 'Heat flux for protective clothing TPP test' },
@@ -304,23 +332,23 @@ const PointSourceCalculator = () => {
   };
 
   const copyResults = () => {
-  if (!result) return;
-  
-  let copyText = `Fire Dynamics Calculator - Point Source Radiation\n`;
-  copyText += `Date: ${new Date().toLocaleString()}\n`;
-  copyText += `Method: q" = χᵣQ̇/(4πR²)\n\n`;
-  copyText += `Result:\n`;
-  copyText += `- Radiative Heat Flux: ${result.toFixed(2)} ${units === 'SI' ? 'kW/m²' : 'BTU/ft²/s'}\n\n`;
-  copyText += `Input Parameters:\n`;
-  copyText += `- Heat Release Rate: ${heatRelease} ${units === 'SI' ? 'kW' : 'BTU/s'}\n`;
-  copyText += `- Distance: ${distance} ${units === 'SI' ? 'm' : 'ft'}\n`;
-  copyText += `- Radiative Fraction: ${radiativeFraction} (${(parseFloat(radiativeFraction) * 100).toFixed(0)}%)\n`;
-  
-  navigator.clipboard.writeText(copyText).then(() => {
-    setCopySuccess(true);
-    setTimeout(() => setCopySuccess(false), 2000);
-  });
-};
+    if (!result) return;
+    
+    let copyText = `Fire Dynamics Calculator - Point Source Radiation\n`;
+    copyText += `Date: ${new Date().toLocaleString()}\n`;
+    copyText += `Method: q" = χᵣQ̇/(4πR²)\n\n`;
+    copyText += `Result:\n`;
+    copyText += `- Radiative Heat Flux: ${result.toFixed(2)} ${units === 'SI' ? 'kW/m²' : 'BTU/ft²/s'}\n\n`;
+    copyText += `Input Parameters:\n`;
+    copyText += `- Heat Release Rate: ${heatRelease} ${units === 'SI' ? 'kW' : 'BTU/s'}\n`;
+    copyText += `- Distance: ${distance} ${units === 'SI' ? 'm' : 'ft'}\n`;
+    copyText += `- Radiative Fraction: ${radiativeFraction} (${(parseFloat(radiativeFraction) * 100).toFixed(0)}%)\n`;
+    
+    navigator.clipboard.writeText(copyText).then(() => {
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    });
+  };
 
   useEffect(() => {
     if (heatRelease && distance && radiativeFraction) {
@@ -337,12 +365,12 @@ const PointSourceCalculator = () => {
   };
 
   return (
-    <Chakra.Box p={6} maxW="2xl" mx="auto">
-      <Chakra.VStack spacing={6} align="stretch">
+    <Chakra.Box p={{ base: 4, sm: 6 }} maxW="2xl" mx="auto">
+      <Chakra.VStack spacing={{ base: 4, sm: 6 }} align="stretch">
         <Chakra.Card variant="outline">
           <Chakra.CardBody>
-            <Chakra.Text fontSize="lg" fontWeight="bold">Point Source Radiation Model:</Chakra.Text>
-            <Chakra.Text fontSize="xl" fontFamily="mono">
+            <Chakra.Text fontSize={{ base: "md", sm: "lg" }} fontWeight="bold">Point Source Radiation Model:</Chakra.Text>
+            <Chakra.Text fontSize={{ base: "lg", sm: "xl" }} fontFamily="mono">
               q" = (Q̇ × χᵣ) / (4π × R²)
             </Chakra.Text>
             <Chakra.Text fontSize="sm" color="gray.600" mt={2}>
@@ -519,44 +547,44 @@ const PointSourceCalculator = () => {
         </Chakra.Button>
 
         {result && (
-  <Chakra.VStack spacing={4} width="100%">
-    <Chakra.Alert status="success">
-      <Chakra.AlertIcon />
-      <Chakra.Box flex="1">
-        <Chakra.VStack align="start" spacing={2}>
-          <Chakra.Text fontWeight="bold">
-            Radiative Heat Flux: {result.toFixed(2)} {units === 'SI' ? 'kW/m²' : 'BTU/ft²/s'}
-          </Chakra.Text>
-          <Chakra.Text fontSize="sm">
-            Based on:
-            <br />
-            Heat Release Rate: {heatRelease} {units === 'SI' ? 'kW' : 'BTU/s'}
-            <br />
-            Distance: {distance} {units === 'SI' ? 'm' : 'ft'}
-            <br />
-            Radiative Fraction: {radiativeFraction} ({(parseFloat(radiativeFraction) * 100).toFixed(0)}%)
-          </Chakra.Text>
-        </Chakra.VStack>
-      </Chakra.Box>
-      <Chakra.VStack>
-        <Chakra.Button
-          size="sm"
-          colorScheme={copySuccess ? "green" : "blue"}
-          onClick={copyResults}
-        >
-          {copySuccess ? "Copied!" : "Copy Results"}
-        </Chakra.Button>
-        <Chakra.Button
-          size="sm"
-          colorScheme="purple"
-          onClick={saveToHistory}
-        >
-          Save to History
-        </Chakra.Button>
-      </Chakra.VStack>
-    </Chakra.Alert>
+          <Chakra.VStack spacing={4} width="100%">
+            <Chakra.Alert status="success">
+              <Chakra.AlertIcon />
+              <Chakra.Box flex="1">
+                <Chakra.VStack align="start" spacing={2}>
+                  <Chakra.Text fontWeight="bold">
+                    Radiative Heat Flux: {result.toFixed(2)} {units === 'SI' ? 'kW/m²' : 'BTU/ft²/s'}
+                  </Chakra.Text>
+                  <Chakra.Text fontSize="sm">
+                    Based on:
+                    <br />
+                    Heat Release Rate: {heatRelease} {units === 'SI' ? 'kW' : 'BTU/s'}
+                    <br />
+                    Distance: {distance} {units === 'SI' ? 'm' : 'ft'}
+                    <br />
+                    Radiative Fraction: {radiativeFraction} ({(parseFloat(radiativeFraction) * 100).toFixed(0)}%)
+                  </Chakra.Text>
+                </Chakra.VStack>
+              </Chakra.Box>
+              <Chakra.VStack>
+                <Chakra.Button
+                  size="sm"
+                  colorScheme={copySuccess ? "green" : "blue"}
+                  onClick={copyResults}
+                >
+                  {copySuccess ? "Copied!" : "Copy Results"}
+                </Chakra.Button>
+                <Chakra.Button
+                  size="sm"
+                  colorScheme="purple"
+                  onClick={saveToHistory}
+                >
+                  Save to History
+                </Chakra.Button>
+              </Chakra.VStack>
+            </Chakra.Alert>
 
-    <Chakra.Card width="100%">
+            <Chakra.Card width="100%">
               <Chakra.CardHeader>
                 <Chakra.Heading size="sm">Critical Value Analysis</Chakra.Heading>
               </Chakra.CardHeader>
@@ -572,7 +600,7 @@ const PointSourceCalculator = () => {
                           bg={getHeatFluxStatus(value)}
                           borderRadius="full"
                         />
-                        <Chakra.Text>
+                        <Chakra.Text fontSize={{ base: "sm", sm: "md" }}>
                           {description}: {compareValue.toFixed(1)} {units === 'SI' ? 'kW/m²' : 'BTU/ft²/s'}
                         </Chakra.Text>
                       </Chakra.HStack>
@@ -581,6 +609,7 @@ const PointSourceCalculator = () => {
                 </Chakra.VStack>
               </Chakra.CardBody>
             </Chakra.Card>
+
             {/* Radiation Zone Visual */}
             <RadiationZoneVisual 
               heatRelease={heatRelease}
@@ -602,14 +631,14 @@ const PointSourceCalculator = () => {
             <Chakra.AccordionPanel>
               <Chakra.Tabs>
                 <Chakra.TabList>
-                  <Chakra.Tab>Radiative Fractions</Chakra.Tab>
-                  <Chakra.Tab>Common Heat Release Rates</Chakra.Tab>
+                  <Chakra.Tab fontSize={{ base: "sm", sm: "md" }}>Radiative Fractions</Chakra.Tab>
+                  <Chakra.Tab fontSize={{ base: "sm", sm: "md" }}>Common Heat Release Rates</Chakra.Tab>
                 </Chakra.TabList>
                 <Chakra.TabPanels>
                   <Chakra.TabPanel>
                     <Chakra.VStack align="start" spacing={2}>
                       {Object.entries(REFERENCE_DATA.radiativeFractions).map(([material, range]) => (
-                        <Chakra.Text key={material}>
+                        <Chakra.Text key={material} fontSize={{ base: "sm", sm: "md" }}>
                           {material}: {range}
                         </Chakra.Text>
                       ))}
@@ -618,7 +647,7 @@ const PointSourceCalculator = () => {
                   <Chakra.TabPanel>
                     <Chakra.VStack align="start" spacing={2}>
                       {Object.entries(REFERENCE_DATA.commonHeatRelease).map(([item, value]) => (
-                        <Chakra.Text key={item}>
+                        <Chakra.Text key={item} fontSize={{ base: "sm", sm: "md" }}>
                           {item}: {value}
                         </Chakra.Text>
                       ))}
