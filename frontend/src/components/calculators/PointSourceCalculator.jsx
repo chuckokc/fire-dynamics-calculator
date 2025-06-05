@@ -8,6 +8,7 @@ const PointSourceCalculator = () => {
   const [radiativeFraction, setRadiativeFraction] = useState('0.3');
   const [units, setUnits] = useState('imperial');
   const [result, setResult] = useState(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Critical heat flux values (in kW/m²)
   const CRITICAL_HEAT_FLUX = {
@@ -92,6 +93,25 @@ const PointSourceCalculator = () => {
 
     setResult(finalResult);
   };
+
+  const copyResults = () => {
+  if (!result) return;
+  
+  let copyText = `Fire Dynamics Calculator - Point Source Radiation\n`;
+  copyText += `Date: ${new Date().toLocaleString()}\n`;
+  copyText += `Method: q" = χᵣQ̇/(4πR²)\n\n`;
+  copyText += `Result:\n`;
+  copyText += `- Radiative Heat Flux: ${result.toFixed(2)} ${units === 'SI' ? 'kW/m²' : 'BTU/ft²/s'}\n\n`;
+  copyText += `Input Parameters:\n`;
+  copyText += `- Heat Release Rate: ${heatRelease} ${units === 'SI' ? 'kW' : 'BTU/s'}\n`;
+  copyText += `- Distance: ${distance} ${units === 'SI' ? 'm' : 'ft'}\n`;
+  copyText += `- Radiative Fraction: ${radiativeFraction} (${(parseFloat(radiativeFraction) * 100).toFixed(0)}%)\n`;
+  
+  navigator.clipboard.writeText(copyText).then(() => {
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 2000);
+  });
+};
 
   useEffect(() => {
     if (heatRelease && distance && radiativeFraction) {
@@ -213,26 +233,36 @@ const PointSourceCalculator = () => {
         </Chakra.Button>
 
         {result && (
-          <Chakra.VStack spacing={4} width="100%">
-            <Chakra.Alert status="success">
-              <Chakra.AlertIcon />
-              <Chakra.VStack align="start" spacing={2}>
-                <Chakra.Text fontWeight="bold">
-                  Radiative Heat Flux: {result.toFixed(2)} {units === 'SI' ? 'kW/m²' : 'BTU/ft²/s'}
-                </Chakra.Text>
-                <Chakra.Text fontSize="sm">
-                  Based on:
-                  <br />
-                  Heat Release Rate: {heatRelease} {units === 'SI' ? 'kW' : 'BTU/s'}
-                  <br />
-                  Distance: {distance} {units === 'SI' ? 'm' : 'ft'}
-                  <br />
-                  Radiative Fraction: {radiativeFraction} ({(parseFloat(radiativeFraction) * 100).toFixed(0)}%)
-                </Chakra.Text>
-              </Chakra.VStack>
-            </Chakra.Alert>
+  <Chakra.VStack spacing={4} width="100%">
+    <Chakra.Alert status="success">
+      <Chakra.AlertIcon />
+      <Chakra.Box flex="1">
+        <Chakra.VStack align="start" spacing={2}>
+          <Chakra.Text fontWeight="bold">
+            Radiative Heat Flux: {result.toFixed(2)} {units === 'SI' ? 'kW/m²' : 'BTU/ft²/s'}
+          </Chakra.Text>
+          <Chakra.Text fontSize="sm">
+            Based on:
+            <br />
+            Heat Release Rate: {heatRelease} {units === 'SI' ? 'kW' : 'BTU/s'}
+            <br />
+            Distance: {distance} {units === 'SI' ? 'm' : 'ft'}
+            <br />
+            Radiative Fraction: {radiativeFraction} ({(parseFloat(radiativeFraction) * 100).toFixed(0)}%)
+          </Chakra.Text>
+        </Chakra.VStack>
+      </Chakra.Box>
+      <Chakra.Button
+        size="sm"
+        colorScheme={copySuccess ? "green" : "blue"}
+        onClick={copyResults}
+        ml={4}
+      >
+        {copySuccess ? "Copied!" : "Copy Results"}
+      </Chakra.Button>
+    </Chakra.Alert>
 
-            <Chakra.Card width="100%">
+    <Chakra.Card width="100%">
               <Chakra.CardHeader>
                 <Chakra.Heading size="sm">Critical Value Analysis</Chakra.Heading>
               </Chakra.CardHeader>

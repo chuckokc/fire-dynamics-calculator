@@ -11,6 +11,7 @@ const FlashoverCalculator = () => {
   const [surfaceMaterial, setSurfaceMaterial] = useState('gypsum');
   const [units, setUnits] = useState('imperial');
   const [results, setResults] = useState(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Material thermal properties (k in kW/m/K, ρ in kg/m³, c in kJ/kg/K)
   const MATERIALS = {
@@ -99,6 +100,26 @@ const FlashoverCalculator = () => {
 
     setResults(finalResults);
   };
+
+  const copyResults = () => {
+  if (!results) return;  // Changed from 'result' to 'results'
+  
+  let copyText = `Fire Dynamics Calculator - Flashover Analysis\n`;
+  copyText += `Date: ${new Date().toLocaleString()}\n\n`;
+  copyText += `Room Parameters:\n`;
+  copyText += `- Dimensions: ${roomLength} × ${roomWidth} × ${roomHeight} ${units === 'SI' ? 'm' : 'ft'}\n`;
+  copyText += `- Opening: ${openingWidth} × ${openingHeight} ${units === 'SI' ? 'm' : 'ft'}\n`;
+  copyText += `- Surface Material: ${MATERIALS[surfaceMaterial].name}\n\n`;
+  copyText += `Results:\n`;
+  copyText += `- MQH Method: ${results.mqh.toFixed(0)} ${units === 'SI' ? 'kW' : 'BTU/s'}\n`;
+  copyText += `- Thomas Method: ${results.thomas.toFixed(0)} ${units === 'SI' ? 'kW' : 'BTU/s'}\n`;
+  copyText += `- Babrauskas Method: ${results.babrauskas.toFixed(0)} ${units === 'SI' ? 'kW' : 'BTU/s'}\n`;
+  
+  navigator.clipboard.writeText(copyText).then(() => {
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 2000);
+  });
+};
 
   useEffect(() => {
     if (roomHeight && roomWidth && roomLength && openingHeight && openingWidth) {
@@ -257,22 +278,32 @@ const FlashoverCalculator = () => {
         </Chakra.Button>
 
         {results && (
-          <Chakra.Alert status="info">
-            <Chakra.AlertIcon />
-            <Chakra.VStack align="start" spacing={2} width="100%">
-              <Chakra.Text fontWeight="bold">Required Heat Release Rate for Flashover:</Chakra.Text>
-              <Chakra.Text>
-                MQH Correlation: {results.mqh.toFixed(0)} {units === 'SI' ? 'kW' : 'BTU/s'}
-              </Chakra.Text>
-              <Chakra.Text>
-                Thomas Correlation: {results.thomas.toFixed(0)} {units === 'SI' ? 'kW' : 'BTU/s'}
-              </Chakra.Text>
-              <Chakra.Text>
-                Babrauskas Correlation: {results.babrauskas.toFixed(0)} {units === 'SI' ? 'kW' : 'BTU/s'}
-              </Chakra.Text>
-            </Chakra.VStack>
-          </Chakra.Alert>
-        )}
+  <Chakra.Alert status="info">
+    <Chakra.AlertIcon />
+    <Chakra.Box flex="1">
+      <Chakra.VStack align="start" spacing={2} width="100%">
+        <Chakra.Text fontWeight="bold">Required Heat Release Rate for Flashover:</Chakra.Text>
+        <Chakra.Text>
+          MQH Correlation: {results.mqh.toFixed(0)} {units === 'SI' ? 'kW' : 'BTU/s'}
+        </Chakra.Text>
+        <Chakra.Text>
+          Thomas Correlation: {results.thomas.toFixed(0)} {units === 'SI' ? 'kW' : 'BTU/s'}
+        </Chakra.Text>
+        <Chakra.Text>
+          Babrauskas Correlation: {results.babrauskas.toFixed(0)} {units === 'SI' ? 'kW' : 'BTU/s'}
+        </Chakra.Text>
+      </Chakra.VStack>
+    </Chakra.Box>
+    <Chakra.Button
+      size="sm"
+      colorScheme={copySuccess ? "green" : "blue"}
+      onClick={copyResults}
+      ml={4}
+    >
+      {copySuccess ? "Copied!" : "Copy Results"}
+    </Chakra.Button>
+  </Chakra.Alert>
+)}
       </Chakra.VStack>
     </Chakra.Box>
   );

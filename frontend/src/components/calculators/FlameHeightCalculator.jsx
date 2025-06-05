@@ -9,6 +9,7 @@ const FlameHeightCalculator = () => {
   const [units, setUnits] = useState('SI');
   const [calculateMode, setCalculateMode] = useState('flameHeight'); // What to calculate
   const [result, setResult] = useState(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Unit conversion functions
   const convertLength = (value, toImperial) => {
@@ -100,6 +101,31 @@ const FlameHeightCalculator = () => {
       unit: resultUnit
     });
   };
+
+  const copyResults = () => {
+  if (!result || result.error) return;
+  
+  let copyText = `Fire Dynamics Calculator - ${result.type}\n`;
+  copyText += `Date: ${new Date().toLocaleString()}\n`;
+  copyText += `Method: Heskestad's Correlation (L = 0.235Q̇²/⁵ - 1.02D)\n\n`;
+  copyText += `Result: ${result.value.toFixed(2)} ${result.unit}\n\n`;
+  copyText += `Input Parameters:\n`;
+  
+  if (calculateMode !== 'heatRelease' && heatRelease) {
+    copyText += `- Heat Release Rate: ${heatRelease} ${units === 'SI' ? 'kW' : 'BTU/s'}\n`;
+  }
+  if (calculateMode !== 'diameter' && diameter) {
+    copyText += `- Fire Diameter: ${diameter} ${units === 'SI' ? 'm' : 'ft'}\n`;
+  }
+  if (calculateMode !== 'flameHeight' && flameHeight) {
+    copyText += `- Flame Height: ${flameHeight} ${units === 'SI' ? 'm' : 'ft'}\n`;
+  }
+  
+  navigator.clipboard.writeText(copyText).then(() => {
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 2000);
+  });
+};
 
   // Automatically calculate when inputs change
   useEffect(() => {
@@ -222,35 +248,45 @@ const FlameHeightCalculator = () => {
         </Chakra.FormControl>
 
         {/* Results */}
-        {result && (
-          result.error ? (
-            <Chakra.Alert status="error">
-              <Chakra.AlertIcon />
-              <Chakra.Text>{result.error}</Chakra.Text>
-            </Chakra.Alert>
-          ) : result.value && (
-            <Chakra.Alert status="success">
-              <Chakra.AlertIcon />
-              <Chakra.VStack align="start" spacing={2}>
-                <Chakra.Text fontWeight="bold">
-                  {result.type}: {result.value > 0 ? result.value.toFixed(2) : 'N/A'} {result.unit}
-                </Chakra.Text>
-                <Chakra.Text fontSize="sm">
-                  Based on:
-                  {calculateMode !== 'heatRelease' && (
-                    <><br />Heat Release Rate: {heatRelease} {units === 'SI' ? 'kW' : 'BTU/s'}</>
-                  )}
-                  {calculateMode !== 'diameter' && (
-                    <><br />Fire Diameter: {diameter} {units === 'SI' ? 'm' : 'ft'}</>
-                  )}
-                  {calculateMode !== 'flameHeight' && (
-                    <><br />Flame Height: {flameHeight} {units === 'SI' ? 'm' : 'ft'}</>
-                  )}
-                </Chakra.Text>
-              </Chakra.VStack>
-            </Chakra.Alert>
-          )
-        )}
+{result && (
+  result.error ? (
+    <Chakra.Alert status="error">
+      <Chakra.AlertIcon />
+      <Chakra.Text>{result.error}</Chakra.Text>
+    </Chakra.Alert>
+  ) : result.value && (
+    <Chakra.Alert status="success">
+      <Chakra.AlertIcon />
+      <Chakra.Box flex="1">
+        <Chakra.VStack align="start" spacing={2}>
+          <Chakra.Text fontWeight="bold">
+            {result.type}: {result.value > 0 ? result.value.toFixed(2) : 'N/A'} {result.unit}
+          </Chakra.Text>
+          <Chakra.Text fontSize="sm">
+            Based on:
+            {calculateMode !== 'heatRelease' && (
+              <><br />Heat Release Rate: {heatRelease} {units === 'SI' ? 'kW' : 'BTU/s'}</>
+            )}
+            {calculateMode !== 'diameter' && (
+              <><br />Fire Diameter: {diameter} {units === 'SI' ? 'm' : 'ft'}</>
+            )}
+            {calculateMode !== 'flameHeight' && (
+              <><br />Flame Height: {flameHeight} {units === 'SI' ? 'm' : 'ft'}</>
+            )}
+          </Chakra.Text>
+        </Chakra.VStack>
+      </Chakra.Box>
+      <Chakra.Button
+        size="sm"
+        colorScheme={copySuccess ? "green" : "blue"}
+        onClick={copyResults}
+        ml={4}
+      >
+        {copySuccess ? "Copied!" : "Copy Results"}
+      </Chakra.Button>
+    </Chakra.Alert>
+  )
+)}
       </Chakra.VStack>
     </Chakra.Box>
   );

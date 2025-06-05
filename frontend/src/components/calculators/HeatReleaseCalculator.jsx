@@ -8,6 +8,7 @@ const HeatReleaseCalculator = () => {
   const [units, setUnits] = useState('imperial');
   const [manualMassFlux, setManualMassFlux] = useState('');
   const [result, setResult] = useState(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Update this section in your MATERIAL_PROPERTIES
 const MATERIAL_PROPERTIES = {
@@ -102,6 +103,32 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
 
     setResult(finalResult);
   };
+
+  const copyResults = () => {
+  if (!result) return;
+  
+  const materialName = MATERIAL_PROPERTIES[material]?.name || 'Unknown';
+  
+  let copyText = `Fire Dynamics Calculator - Heat Release Rate\n`;
+  copyText += `Date: ${new Date().toLocaleString()}\n`;
+  copyText += `Method: Q̇ = ṁ" × A × ΔHc\n\n`;
+  copyText += `Result: ${result.toFixed(2)} ${units === 'SI' ? 'kW' : 'BTU/s'}\n\n`;
+  copyText += `Input Parameters:\n`;
+  copyText += `- Material: ${materialName}\n`;
+  copyText += `- Burning Area: ${burningArea} ${units === 'SI' ? 'm²' : 'ft²'}\n`;
+  
+  if (needsMassFluxInput && manualMassFlux) {
+    copyText += `- Mass Flux: ${manualMassFlux} g/m²-s\n`;
+  } else if (MATERIAL_PROPERTIES[material]?.massFlux) {
+    copyText += `- Mass Flux: ${MATERIAL_PROPERTIES[material].massFlux} g/m²-s\n`;
+  }
+  copyText += `- Heat of Combustion: ${MATERIAL_PROPERTIES[material].heatOfCombustion} kJ/g\n`;
+  
+  navigator.clipboard.writeText(copyText).then(() => {
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 2000);
+  });
+};
 
   useEffect(() => {
     if (material && burningArea && (MATERIAL_PROPERTIES[material]?.massFlux || manualMassFlux)) {
@@ -226,27 +253,37 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
         </Chakra.Button>
 
         {result && (
-          <Chakra.Alert status="success">
-            <Chakra.AlertIcon />
-            <Chakra.VStack align="start" spacing={2}>
-              <Chakra.Text fontWeight="bold">
-                Heat Release Rate: {result.toFixed(0)} {units === 'SI' ? 'kW' : 'BTU/s'}
-              </Chakra.Text>
-              {material && (
-                <Chakra.Text fontSize="sm">
-                  Using {MATERIAL_PROPERTIES[material].name} with:
-                  <br />
-                  Mass Flux: {needsMassFluxInput ? manualMassFlux : MATERIAL_PROPERTIES[material].massFlux} g/m²-s
-                  <br />
-                  Heat of Combustion: {MATERIAL_PROPERTIES[material].heatOfCombustion} kJ/g
-                </Chakra.Text>
-              )}
-              <Chakra.Text fontSize="sm" color="gray.600">
-                Conversion: 1 kW = 0.947817 BTU/s
-              </Chakra.Text>
-            </Chakra.VStack>
-          </Chakra.Alert>
+  <Chakra.Alert status="success">
+    <Chakra.AlertIcon />
+    <Chakra.Box flex="1">
+      <Chakra.VStack align="start" spacing={2}>
+        <Chakra.Text fontWeight="bold">
+          Heat Release Rate: {result.toFixed(0)} {units === 'SI' ? 'kW' : 'BTU/s'}
+        </Chakra.Text>
+        {material && (
+          <Chakra.Text fontSize="sm">
+            Using {MATERIAL_PROPERTIES[material].name} with:
+            <br />
+            Mass Flux: {needsMassFluxInput ? manualMassFlux : MATERIAL_PROPERTIES[material].massFlux} g/m²-s
+            <br />
+            Heat of Combustion: {MATERIAL_PROPERTIES[material].heatOfCombustion} kJ/g
+          </Chakra.Text>
         )}
+        <Chakra.Text fontSize="sm" color="gray.600">
+          Conversion: 1 kW = 0.947817 BTU/s
+        </Chakra.Text>
+      </Chakra.VStack>
+    </Chakra.Box>
+    <Chakra.Button
+      size="sm"
+      colorScheme={copySuccess ? "green" : "blue"}
+      onClick={copyResults}
+      ml={4}
+    >
+      {copySuccess ? "Copied!" : "Copy Results"}
+    </Chakra.Button>
+  </Chakra.Alert>
+)}
       </Chakra.VStack>
     </Chakra.Box>
   );

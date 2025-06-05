@@ -10,6 +10,7 @@ const TSquaredCalculator = () => {
   const [units, setUnits] = useState('SI');
   const [calculateMode, setCalculateMode] = useState('heatRelease'); // 'heatRelease' or 'time'
   const [result, setResult] = useState(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Fire growth coefficients (α) in kW/s²
   const growthCoefficients = {
@@ -101,6 +102,34 @@ const TSquaredCalculator = () => {
       alpha: alpha
     });
   };
+
+  const copyResults = () => {
+  if (!result || result.error) return;
+  
+  let copyText = `Fire Dynamics Calculator - T-Squared Growth\n`;
+  copyText += `Date: ${new Date().toLocaleString()}\n`;
+  copyText += `Method: Q = αt²\n\n`;
+  copyText += `Result: ${result.value.toFixed(2)} ${result.unit}`;
+  
+  if (calculateMode === 'time' && result.value) {
+    copyText += ` (${(result.value / 60).toFixed(2)} minutes)`;
+  }
+  copyText += `\n\n`;
+  
+  copyText += `Input Parameters:\n`;
+  copyText += `- Growth Rate: ${growthRate} (α = ${result.alpha} kW/s²)\n`;
+  
+  if (calculateMode === 'heatRelease') {
+    copyText += `- Time: ${time} seconds\n`;
+  } else {
+    copyText += `- Target HRR: ${heatRelease} ${units === 'SI' ? 'kW' : 'BTU/s'}\n`;
+  }
+  
+  navigator.clipboard.writeText(copyText).then(() => {
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 2000);
+  });
+};
 
   // Automatically calculate when inputs change
   useEffect(() => {
@@ -227,67 +256,77 @@ const TSquaredCalculator = () => {
         )}
 
         {/* Unit Selection */}
-        <Chakra.FormControl>
-          <Chakra.FormLabel>Units</Chakra.FormLabel>
-          <Chakra.VStack align="start" spacing={2}>
-            <Chakra.RadioGroup 
-              value={units} 
-              onChange={(newUnits) => setUnits(newUnits)}
-            >
-              <Chakra.HStack spacing={4}>
-                <Chakra.Radio value="SI">SI (kW)</Chakra.Radio>
-                <Chakra.Radio value="imperial">Imperial (BTU/s)</Chakra.Radio>
-              </Chakra.HStack>
-            </Chakra.RadioGroup>
-            
-            <Chakra.Button 
-              size="sm" 
-              colorScheme="blue" 
-              onClick={handleUnitConversion}
-            >
-              Convert Current Values to {units === 'SI' ? 'Imperial' : 'SI'} Units
-            </Chakra.Button>
-          </Chakra.VStack>
-        </Chakra.FormControl>
+<Chakra.FormControl>
+  <Chakra.FormLabel>Units</Chakra.FormLabel>
+  <Chakra.VStack align="start" spacing={2}>
+    <Chakra.RadioGroup 
+      value={units} 
+      onChange={(newUnits) => setUnits(newUnits)}
+    >
+      <Chakra.HStack spacing={4}>
+        <Chakra.Radio value="SI">SI (kW)</Chakra.Radio>
+        <Chakra.Radio value="imperial">Imperial (BTU/s)</Chakra.Radio>
+      </Chakra.HStack>
+    </Chakra.RadioGroup>
+    
+    <Chakra.Button 
+      size="sm" 
+      colorScheme="blue" 
+      onClick={handleUnitConversion}
+    >
+      Convert Current Values to {units === 'SI' ? 'Imperial' : 'SI'} Units
+    </Chakra.Button>
+  </Chakra.VStack>
+</Chakra.FormControl>
 
-        {/* Results */}
-        {result && (
-          result.error ? (
-            <Chakra.Alert status="error">
-              <Chakra.AlertIcon />
-              <Chakra.Text>{result.error}</Chakra.Text>
-            </Chakra.Alert>
-          ) : result.value !== undefined && (
-            <Chakra.Alert status="success">
-              <Chakra.AlertIcon />
-              <Chakra.VStack align="start" spacing={2}>
-                <Chakra.Text fontWeight="bold">
-                  {result.type}: {result.value.toFixed(2)} {result.unit}
-                </Chakra.Text>
-                <Chakra.Text fontSize="sm">
-                  {calculateMode === 'heatRelease' ? (
-                    <>
-                      At t = {time} seconds
-                      <br />
-                      Growth rate: {growthRate} (α = {result.alpha} kW/s²)
-                    </>
-                  ) : (
-                    <>
-                      To reach Q = {heatRelease} {units === 'SI' ? 'kW' : 'BTU/s'}
-                      <br />
-                      Growth rate: {growthRate} (α = {result.alpha} kW/s²)
-                    </>
-                  )}
-                </Chakra.Text>
-                {calculateMode === 'time' && (
-                  <Chakra.Text fontSize="sm" color="gray.600">
-                    = {(result.value / 60).toFixed(2)} minutes
-                  </Chakra.Text>
-                )}
-              </Chakra.VStack>
-            </Chakra.Alert>
-          )
-        )}
+{/* Results */}
+{result && (
+  result.error ? (
+    <Chakra.Alert status="error">
+      <Chakra.AlertIcon />
+      <Chakra.Text>{result.error}</Chakra.Text>
+    </Chakra.Alert>
+  ) : result.value !== undefined && (
+    <Chakra.Alert status="success">
+      <Chakra.AlertIcon />
+      <Chakra.Box flex="1">
+        <Chakra.VStack align="start" spacing={2}>
+          <Chakra.Text fontWeight="bold">
+            {result.type}: {result.value.toFixed(2)} {result.unit}
+          </Chakra.Text>
+          <Chakra.Text fontSize="sm">
+            {calculateMode === 'heatRelease' ? (
+              <>
+                At t = {time} seconds
+                <br />
+                Growth rate: {growthRate} (α = {result.alpha} kW/s²)
+              </>
+            ) : (
+              <>
+                To reach Q = {heatRelease} {units === 'SI' ? 'kW' : 'BTU/s'}
+                <br />
+                Growth rate: {growthRate} (α = {result.alpha} kW/s²)
+              </>
+            )}
+          </Chakra.Text>
+          {calculateMode === 'time' && (
+            <Chakra.Text fontSize="sm" color="gray.600">
+              = {(result.value / 60).toFixed(2)} minutes
+            </Chakra.Text>
+          )}
+        </Chakra.VStack>
+      </Chakra.Box>
+      <Chakra.Button
+        size="sm"
+        colorScheme={copySuccess ? "green" : "blue"}
+        onClick={copyResults}
+        ml={4}
+      >
+        {copySuccess ? "Copied!" : "Copy Results"}
+      </Chakra.Button>
+    </Chakra.Alert>
+  )
+)}
       </Chakra.VStack>
     </Chakra.Box>
   );
