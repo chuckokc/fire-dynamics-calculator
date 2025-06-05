@@ -155,7 +155,7 @@ const FlashoverCalculator = () => {
             </Chakra.Text>
           </Chakra.CardBody>
         </Chakra.Card>
-
+        
         <Chakra.FormControl isRequired>
           <Chakra.FormLabel>Room Height</Chakra.FormLabel>
           <Chakra.NumberInput
