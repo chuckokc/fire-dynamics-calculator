@@ -1,5 +1,5 @@
 // INCREMENT THIS VERSION NUMBER WITH EACH DEPLOYMENT!
-const CACHE_VERSION = 'v1.0.1'; //Increment this with each deployment. On-deck 'v1.0.2'
+const CACHE_VERSION = 'v1.0.2'; //Increment this with each deployment. On-deck 'v1.0.3'
 const CACHE_NAME = `fire-dynamics-${CACHE_VERSION}`;
 
 // Only cache essential static files

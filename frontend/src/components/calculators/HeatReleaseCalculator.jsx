@@ -135,13 +135,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
       calculateHeatRelease();
     }
   }, [material, burningArea, manualMassFlux, units]);
-  console.log({
-    selectedMaterial,
-    needsMassFluxInput,
-    material,
-    hasMassFlux: selectedMaterial?.massFlux
-  });
-
+  
   return (
     <Chakra.Box p={6} maxW="2xl" mx="auto">
       <Chakra.VStack spacing={6} align="stretch">
