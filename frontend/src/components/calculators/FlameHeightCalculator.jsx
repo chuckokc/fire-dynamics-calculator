@@ -1,6 +1,154 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
 
+// Visual Flame Height Indicator Component
+const FlameHeightVisual = ({ flameHeight, units }) => {
+  // Reference heights in meters with styling
+  const references = [
+    { 
+      name: 'Person', 
+      heightM: 1.8, 
+      color: 'blue.600', 
+      labelSide: 'left',
+      labelBelow: true,
+      lineStyle: '2px solid'
+    },
+    { 
+      name: 'Door', 
+      heightM: 2.1, 
+      color: 'green.600', 
+      labelSide: 'right',
+      labelBelow: false,
+      lineStyle: '2px dashed'
+    },
+    { 
+      name: 'Ceiling', 
+      heightM: 2.4, 
+      color: 'orange.600', 
+      labelSide: 'left',
+      labelBelow: false,
+      lineStyle: '2px dotted'
+    },
+    { 
+      name: '2-Story', 
+      heightM: 6.0, 
+      color: 'red.600', 
+      labelSide: 'right',
+      labelBelow: false,
+      lineStyle: '1px dashed'
+    }
+  ];
+
+  // Convert flame height to meters for comparison
+  const flameHeightM = units === 'imperial' ? flameHeight * 0.3048 : flameHeight;
+  
+  // Maximum height for scaling (meters)
+  const maxHeight = 10;
+  
+  // Calculate percentage heights
+  const flamePercent = Math.min((flameHeightM / maxHeight) * 100, 100);
+  
+  return (
+    <Chakra.Box p={4} bg="gray.50" borderRadius="md">
+      <Chakra.Text fontWeight="bold" mb={3}>Flame Height Visualization</Chakra.Text>
+      
+      <Chakra.Box position="relative" h="250px" bg="white" borderRadius="md" p={4}>
+        {/* Reference lines */}
+        {references.map((ref, index) => {
+          const refPercent = (ref.heightM / maxHeight) * 100;
+          const heightValue = units === 'imperial' ? 
+            (ref.heightM * 3.28084).toFixed(1) : 
+            ref.heightM.toFixed(1);
+          const unitLabel = units === 'imperial' ? 'ft' : 'm';
+          
+          // Parse line style
+          const [lineWidth, lineType] = ref.lineStyle.split(' ');
+          
+          return (
+            <Chakra.Box
+              key={ref.name}
+              position="absolute"
+              bottom={`${refPercent}%`}
+              left={0}
+              right={0}
+              borderTop={ref.lineStyle}
+              borderColor={ref.color}
+              opacity={0.8}
+            >
+              <Chakra.Text
+                position="absolute"
+                {...(ref.labelSide === 'left' ? { left: 2 } : { right: 2 })}
+                {...(ref.labelBelow ? { top: '2px' } : { top: '-20px' })}
+                fontSize="12px"
+                color={ref.color}
+                fontWeight="bold"
+                bg="white"
+                px={1}
+                borderRadius="sm"
+                border="1px solid"
+                borderColor={ref.color}
+              >
+                {ref.name} • {heightValue}{unitLabel}
+              </Chakra.Text>
+            </Chakra.Box>
+          );
+        })}
+        
+        {/* Flame bar */}
+        <Chakra.Box
+          position="absolute"
+          bottom={0}
+          left="50%"
+          transform="translateX(-50%)"
+          w="50px"
+          h={`${flamePercent}%`}
+          bgGradient="linear(to-t, orange.500, orange.400, red.400)"
+          borderRadius="md md 50% 50% / md md 40% 40%"
+          transition="height 0.3s ease"
+          boxShadow="0 0 25px rgba(251, 211, 141, 0.6)"
+        />
+        
+        {/* Current height label */}
+        {flameHeight > 0 && (
+          <Chakra.Box
+            position="absolute"
+            bottom={`${Math.min(flamePercent + 3, 90)}%`}
+            left="50%"
+            transform="translateX(-50%)"
+          >
+            <Chakra.Box
+              bg="red.600"
+              color="white"
+              px={3}
+              py={1}
+              borderRadius="full"
+              fontSize="sm"
+              fontWeight="bold"
+              boxShadow="md"
+            >
+              {flameHeight.toFixed(1)} {units === 'imperial' ? 'ft' : 'm'}
+            </Chakra.Box>
+          </Chakra.Box>
+        )}
+        
+        {/* Ground line */}
+        <Chakra.Box
+          position="absolute"
+          bottom={0}
+          left={0}
+          right={0}
+          h="2px"
+          bg="gray.600"
+        />
+      </Chakra.Box>
+      
+      <Chakra.Text fontSize="xs" color="gray.600" mt={2} textAlign="center">
+        Scale: 0 to {units === 'imperial' ? '32.8 ft' : '10 m'}
+      </Chakra.Text>
+    </Chakra.Box>
+  );
+};
+
 const FlameHeightCalculator = () => {
   // State declarations
   const [heatRelease, setHeatRelease] = useState('');
@@ -287,6 +435,13 @@ const FlameHeightCalculator = () => {
     </Chakra.Alert>
   )
 )}
+ {/* Visual Flame Height Indicator */}
+        {calculateMode === 'flameHeight' && result && !result.error && result.value > 0 && (
+          <FlameHeightVisual 
+            flameHeight={result.value} 
+            units={units} 
+          />
+        )}
       </Chakra.VStack>
     </Chakra.Box>
   );
