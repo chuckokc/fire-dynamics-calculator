@@ -8,6 +8,7 @@ import FlashoverCalculator from './components/calculators/FlashoverCalculator';
 import ReferenceGuide from './components/reference/ReferenceGuide';
 import Authentication from './components/Authentication';
 import TSquaredCalculator from './components/calculators/TSquaredCalculator';
+import AreaVolumeApiCalculator from './components/calculators/AreaVolumeApiCalculator'; // <-- ADD THIS LINE
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { ColorModeScript } from '@chakra-ui/react';
 import theme from './theme';
@@ -98,6 +99,7 @@ const MainApp = () => {
             <Chakra.Tab>Point Source Radiation</Chakra.Tab>
             <Chakra.Tab>Flashover</Chakra.Tab>
             <Chakra.Tab>T-Squared Growth</Chakra.Tab>
+            <Chakra.Tab>Area & Volume (API)</Chakra.Tab> {/* <-- ADD THIS LINE */}
             <Chakra.Tab>Reference Data</Chakra.Tab>
           </Chakra.TabList>
 
@@ -165,13 +167,28 @@ const MainApp = () => {
       with standard growth rate coefficients (slow, medium, fast, ultra-fast).
     </Chakra.Text>
     <Chakra.Center py={4}>
+      // frontend/src/App.jsx
       <TSquaredCalculator />
     </Chakra.Center>
   </Chakra.VStack>
 </Chakra.TabPanel>
 
-            {/* Reference Data Panel */}
-            <Chakra.TabPanel>
+{/* --- ADD THIS ENTIRE NEW PANEL --- */}
+<Chakra.TabPanel>
+  <Chakra.VStack spacing={4} align="stretch">
+    <Chakra.Heading size="md">Area & Volume (API Test)</Chakra.Heading>
+    <Chakra.Text color="gray.600" fontSize="sm">
+      This calculator sends the inputs to the Python backend for processing.
+    </Chakra.Text>
+    <Chakra.Center py={4}>
+      <AreaVolumeApiCalculator />
+    </Chakra.Center>
+  </Chakra.VStack>
+</Chakra.TabPanel>
+{/* --- END OF NEW PANEL --- */}
+
+{/* Reference Data Panel */}
+<Chakra.TabPanel>
               <Chakra.VStack spacing={4} align="stretch">
                 <Chakra.Heading size="md">Reference Data</Chakra.Heading>
                 <Chakra.Text color="gray.600" fontSize="sm">

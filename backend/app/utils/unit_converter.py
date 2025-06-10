@@ -62,3 +62,28 @@ class UnitConverter:
             return value * conversions['ft_to_m']
         else:
             raise ValueError("Units must be 'm' or 'ft'")
+         # --- ADD THIS ENTIRE NEW METHOD ---
+    @staticmethod
+    def heat_release_converter(value: float, from_unit: str, to_unit: str) -> float:
+        """
+        Converts heat release rates between kilowatts (kW) and British Thermal Units per second (BTU/s).
+        
+        Example:
+            1000 kW -> 947.817 BTU/s
+        """
+        conversions = {
+            'kw_to_btu': 0.947817, # 1 kW = 0.947817 BTU/s
+            'btu_to_kw': 1.055056  # 1 BTU/s = 1.055056 kW
+        }
+
+        from_unit = from_unit.lower()
+        to_unit = to_unit.lower()
+        
+        if from_unit == to_unit:
+            return value
+        elif from_unit == 'kw' and to_unit == 'btu/s':
+            return value * conversions['kw_to_btu']
+        elif from_unit == 'btu/s' and to_unit == 'kw':
+            return value * conversions['btu_to_kw']
+        else:
+            raise ValueError("Units must be 'kW' or 'BTU/s'")
