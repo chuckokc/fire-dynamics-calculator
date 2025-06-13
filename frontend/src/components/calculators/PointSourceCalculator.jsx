@@ -174,7 +174,10 @@ const PointSourceCalculator = () => {
     setIsLoading(true);
     setResult(null);
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/point_source_radiation', {
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/flashover`;
+
+      // Send the data to our Python backend
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ heatRelease, distance, radiativeFraction, units }),

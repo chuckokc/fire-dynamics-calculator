@@ -73,7 +73,10 @@ const FlashoverCalculator = () => {
     setResults(null);
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/flashover', {
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/flashover`;
+
+      // Send the data to our Python backend
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
