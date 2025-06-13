@@ -1,4 +1,8 @@
-# backend/api.py
+import sys
+import os
+
+# This adds the 'backend' directory to Python's path, allowing imports from the 'app' folder
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -8,33 +12,33 @@ from flask_cors import CORS
 
 
 # Now you can import your calculator
-from calculations.area_volume import AreaVolumeCalculator
-from calculations.flashover import FlashoverCalculator # <-- ADD THIS LINE
-from utils.unit_converter import UnitConverter
+from app.calculations.area_volume import AreaVolumeCalculator
+from app.calculations.flashover import FlashoverCalculator # <-- ADD THIS LINE
+from app.utils.unit_converter import UnitConverter
 # backend/api.py
-from calculations.flashover import FlashoverCalculator
-from calculations.flame_height import FlameHeightCalculator # <-- ADD THIS LINE
-from utils.unit_converter import UnitConverter
+from app.calculations.flashover import FlashoverCalculator
+from app.calculations.flame_height import FlameHeightCalculator # <-- ADD THIS LINE
+from app.utils.unit_converter import UnitConverter
 
 # backend/api.py
-from calculations.flame_height import FlameHeightCalculator
-from calculations.radiation import RadiationCalculator # <-- ADD THIS LINE
-from utils.unit_converter import UnitConverter
+from app.calculations.flame_height import FlameHeightCalculator
+from app.calculations.radiation import RadiationCalculator # <-- ADD THIS LINE
+from app.utils.unit_converter import UnitConverter
 
 # backend/api.py
-from calculations.radiation import RadiationCalculator
-from calculations.t_squared import TSquaredCalculator # <-- ADD THIS LINE
-from utils.unit_converter import UnitConverter
+from app.calculations.radiation import RadiationCalculator
+from app.calculations.t_squared import TSquaredCalculator # <-- ADD THIS LINE
+from app.utils.unit_converter import UnitConverter
 
 # backend/api.py
-from calculations.t_squared import TSquaredCalculator
-from calculations.heat_release import HeatReleaseCalculator # <-- ADD THIS LINE
-from utils.unit_converter import UnitConverter
+from app.calculations.t_squared import TSquaredCalculator
+from app.calculations.heat_release import HeatReleaseCalculator # <-- ADD THIS LINE
+from app.utils.unit_converter import UnitConverter
 
 # backend/api.py
-from calculations.heat_release import HeatReleaseCalculator
-from calculations.material_properties import MaterialProperties # <-- ADD OR VERIFY THIS IMPORT
-from utils.unit_converter import UnitConverter
+from app.calculations.heat_release import HeatReleaseCalculator
+from app.calculations.material_properties import MaterialProperties # <-- ADD OR VERIFY THIS IMPORT
+from app.utils.unit_converter import UnitConverter
 
 # --- Flask App Setup ---
 app = Flask(__name__)
