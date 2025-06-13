@@ -1,13 +1,11 @@
 # backend/api.py
 
-import sys
-import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 # This is a crucial step to ensure the script can find your calculation modules.
 # It adds the 'backend/app' directory to Python's path.
-sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
+
 
 # Now you can import your calculator
 from calculations.area_volume import AreaVolumeCalculator
@@ -316,7 +314,5 @@ def get_materials():
         return jsonify({"error": str(e)}), 500
     
 # --- Main entry point to run the server ---
-if __name__ == '__main__':
-    # Runs the Flask app on a local development server
-    # The debug=True flag allows the server to auto-reload when you save changes
-    app.run(debug=True, port=5000)
+# This file no longer needs a __main__ block to run the server.
+# The new top-level app.py handles that.
