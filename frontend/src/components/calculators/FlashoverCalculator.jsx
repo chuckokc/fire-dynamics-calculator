@@ -15,7 +15,9 @@ import {
   HStack,
   useColorModeValue,
   Alert,
-  AlertIcon
+  AlertIcon,
+  Card,         // <-- ADD THIS
+  CardBody      // <-- AND THIS
 } from '@chakra-ui/react';
 
 const FlashoverCalculator = () => {
@@ -114,6 +116,22 @@ const FlashoverCalculator = () => {
         <Text fontSize="sm">
           Estimate minimum heat release rate for flashover using MQH, Thomas, and Babrauskas correlations.
         </Text>
+
+        {/* --- ADD THIS ENTIRE CARD --- */}
+        <Card variant="outline">
+          <CardBody>
+            <Text fontSize="md" fontWeight="bold">Flashover Correlations:</Text>
+            <Text fontSize="lg" fontFamily="mono" mt={2}>
+              MQH: Q̇ = 610(hₖAₜ√Aₒ√Hₒ)^(1/2)
+            </Text>
+            <Text fontSize="lg" fontFamily="mono">
+              Thomas: Q̇ = 7.8Aₜ + 378Aₒ√Hₒ
+            </Text>
+            <Text fontSize="lg" fontFamily="mono">
+              Babrauskas: Q̇ = 750Aₒ√Hₒ
+            </Text>
+          </CardBody>
+        </Card>
 
         <FormControl isRequired><FormLabel>Room Height</FormLabel><Input type="number" value={roomHeight} onChange={(e) => setRoomHeight(e.target.value)} /></FormControl>
         <FormControl isRequired><FormLabel>Room Width</FormLabel><Input type="number" value={roomWidth} onChange={(e) => setRoomWidth(e.target.value)} /></FormControl>

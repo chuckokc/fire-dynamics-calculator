@@ -13,6 +13,30 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
 from calculations.area_volume import AreaVolumeCalculator
 from calculations.flashover import FlashoverCalculator # <-- ADD THIS LINE
 from utils.unit_converter import UnitConverter
+# backend/api.py
+from calculations.flashover import FlashoverCalculator
+from calculations.flame_height import FlameHeightCalculator # <-- ADD THIS LINE
+from utils.unit_converter import UnitConverter
+
+# backend/api.py
+from calculations.flame_height import FlameHeightCalculator
+from calculations.radiation import RadiationCalculator # <-- ADD THIS LINE
+from utils.unit_converter import UnitConverter
+
+# backend/api.py
+from calculations.radiation import RadiationCalculator
+from calculations.t_squared import TSquaredCalculator # <-- ADD THIS LINE
+from utils.unit_converter import UnitConverter
+
+# backend/api.py
+from calculations.t_squared import TSquaredCalculator
+from calculations.heat_release import HeatReleaseCalculator # <-- ADD THIS LINE
+from utils.unit_converter import UnitConverter
+
+# backend/api.py
+from calculations.heat_release import HeatReleaseCalculator
+from calculations.material_properties import MaterialProperties # <-- ADD OR VERIFY THIS IMPORT
+from utils.unit_converter import UnitConverter
 
 # --- Flask App Setup ---
 app = Flask(__name__)
@@ -96,9 +120,201 @@ def flashover():
         return jsonify(results_si)
 
     except Exception as e:
-        # A general exception handler is good practice
-        return jsonify({"error": str(e)}), 400
+            print(f"--- ERROR in point_source_radiation_endpoint: {e} ---") # <-- ADD THIS LINE
+            return jsonify({"error": str(e)}), 400
+    # --- ADD THIS ENTIRE NEW ENDPOINT ---
 
+# Paste this entire function into api.py
+
+# Replace the old flame_height_endpoint with this one in api.py
+
+@app.route('/api/flame_height', methods=['POST'])
+def flame_height_endpoint():
+    try:
+        data = request.json
+        mode = data.get('calculateMode')
+        units = data.get('units', 'SI')
+        
+        hrr_in = float(data.get('heatRelease') or 0)
+        diameter_in = float(data.get('diameter') or 0)
+        flame_height_in = float(data.get('flameHeight') or 0)
+
+        # 1. Convert all inputs to SI units first
+        if units.lower() == 'imperial':
+            hrr_si = UnitConverter.heat_release_converter(hrr_in, 'btu/s', 'kw')
+            diameter_si = UnitConverter.length_converter(diameter_in, 'ft', 'm')
+            flame_height_si = UnitConverter.length_converter(flame_height_in, 'ft', 'm')
+        else:
+            hrr_si = hrr_in
+            diameter_si = diameter_in
+            flame_height_si = flame_height_in
+
+        # 2. Perform the calculation in SI units
+        result_si = 0
+        if mode == 'flameHeight':
+            result_si = FlameHeightCalculator.calculate_flame_height(Q=hrr_si, D=diameter_si)
+        elif mode == 'heatRelease':
+            if flame_height_si <= 0 or diameter_si <= 0:
+                raise ValueError("Flame Height and Diameter must be positive.")
+            numerator = flame_height_si + (1.02 * diameter_si)
+            result_si = (numerator / 0.235)**2.5
+        elif mode == 'diameter':
+            if flame_height_si <= 0 or hrr_si <= 0:
+                raise ValueError("Flame Height and Heat Release Rate must be positive.")
+            numerator = (0.235 * (hrr_si**0.4)) - flame_height_si
+            if numerator <= 0:
+                raise ValueError("Flame height is too large for the given Heat Release Rate.")
+            result_si = numerator / 1.02
+        else:
+            raise ValueError(f"Invalid calculation mode: {mode}")
+
+        # 3. Prepare the final value, converting the output if necessary
+        final_value = 0
+        if units.lower() == 'imperial':
+            # We need to convert the SI result to Imperial units
+            if mode == 'heatRelease':
+                final_value = UnitConverter.heat_release_converter(result_si, 'kw', 'btu/s')
+            else:  # This handles 'flameHeight' and 'diameter'
+                final_value = UnitConverter.length_converter(result_si, 'm', 'ft')
+        else:
+            # If SI, the result is already in the correct units
+            final_value = result_si
+
+        return jsonify({"value": final_value})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    
+ # --- ADD THIS ENTIRE NEW ENDPOINT ---
+@app.route('/api/point_source_radiation', methods=['POST'])
+def point_source_radiation_endpoint():
+    try:
+        data = request.json
+        units = data.get('units', 'SI')
+
+        hrr_in = float(data.get('heatRelease') or 0)
+        distance_in = float(data.get('distance') or 0)
+        rad_fraction = float(data.get('radiativeFraction') or 0)
+
+        # 1. Convert inputs to SI
+        if units.lower() == 'imperial':
+            hrr_si = UnitConverter.heat_release_converter(hrr_in, 'btu/s', 'kw')
+            distance_si = UnitConverter.length_converter(distance_in, 'ft', 'm')
+        else:
+            hrr_si = hrr_in
+            distance_si = distance_in
+
+        # 2. Perform calculation in SI
+        result_si = RadiationCalculator.calculate_heat_flux(Q=hrr_si, R=distance_si, Xr=rad_fraction)
+
+        # 3. Convert output if necessary
+        final_value = result_si
+        if units.lower() == 'imperial':
+            # The point source formula gives heat flux (kW/m^2), which needs a specific converter
+            final_value = UnitConverter.heat_flux_converter(result_si, 'kw/m2', 'btu/ft2/s')
+
+        return jsonify({"value": final_value})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400   
+    
+    # --- ADD THIS ENTIRE NEW ENDPOINT ---
+@app.route('/api/t_squared_growth', methods=['POST'])
+def t_squared_growth_endpoint():
+    try:
+        data = request.json
+        mode = data.get('calculateMode')
+        units = data.get('units', 'SI')
+        growth_rate = data.get('growthRate', 'medium')
+
+        time_in = float(data.get('time') or 0)
+        hrr_in = float(data.get('heatRelease') or 0)
+        custom_alpha_in = float(data.get('customAlpha') or 0)
+
+        # Determine alpha in SI units
+        if growth_rate == 'custom':
+            if units.lower() == 'imperial':
+                alpha_si = UnitConverter.alpha_converter(custom_alpha_in, 'btu/s3', 'kw/s2')
+            else:
+                alpha_si = custom_alpha_in
+        else:
+            alpha_si = TSquaredCalculator.GROWTH_COEFFICIENTS.get(growth_rate)
+
+        if alpha_si is None:
+            raise ValueError(f"Invalid growth rate: {growth_rate}")
+
+        # Convert other inputs to SI
+        if units.lower() == 'imperial':
+            hrr_si = UnitConverter.heat_release_converter(hrr_in, 'btu/s', 'kw')
+        else:
+            hrr_si = hrr_in
+
+        # Perform calculation
+        result_si = 0
+        if mode == 'heatRelease':
+            result_si = TSquaredCalculator.calculate_hrr(alpha=alpha_si, time=time_in)
+        elif mode == 'time':
+            result_si = TSquaredCalculator.calculate_time(alpha=alpha_si, hrr=hrr_si)
+
+        # Convert final result back to imperial if needed
+        final_value = result_si
+        if units.lower() == 'imperial':
+            if mode == 'heatRelease':
+                final_value = UnitConverter.heat_release_converter(result_si, 'kw', 'btu/s')
+            # Time is already in seconds, no conversion needed for 'time' mode
+
+        return jsonify({"value": final_value})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    
+    # --- ADD THIS ENTIRE NEW ENDPOINT ---
+@app.route('/api/heat_release', methods=['POST'])
+def heat_release_endpoint():
+    try:
+        data = request.json
+        units = data.get('units', 'SI')
+        material_key = data.get('material')
+        area_in = float(data.get('burningArea') or 0)
+        manual_mass_flux = data.get('manualMassFlux') # Can be None
+
+        # Convert area input to SI
+        if units.lower() == 'imperial':
+            area_si = UnitConverter.area_converter(area_in, 'ft2', 'm2')
+        else:
+            area_si = area_in
+
+        # Mass flux is always provided in g/m²-s from the frontend
+        manual_mass_flux_si = float(manual_mass_flux) if manual_mass_flux else None
+
+        # Perform calculation in SI
+        result_si = HeatReleaseCalculator.calculate_hrr(
+            material_key=material_key,
+            burning_area=area_si,
+            manual_mass_flux=manual_mass_flux_si
+        )
+
+        # Convert output if necessary
+        final_value = result_si
+        if units.lower() == 'imperial':
+            final_value = UnitConverter.heat_release_converter(result_si, 'kw', 'btu/s')
+
+        return jsonify({"value": final_value})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    
+    # --- ADD THIS ENTIRE NEW ENDPOINT ---
+@app.route('/api/materials', methods=['GET'])
+def get_materials():
+    try:
+        # Use the new helper method to get all fuel data
+        all_fuels = MaterialProperties.get_all_fuels()
+        return jsonify(all_fuels)
+    except Exception as e:
+        # Return an error if something goes wrong
+        return jsonify({"error": str(e)}), 500
+    
 # --- Main entry point to run the server ---
 if __name__ == '__main__':
     # Runs the Flask app on a local development server
