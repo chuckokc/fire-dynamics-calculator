@@ -1,0 +1,39 @@
+0000000000000000000000000000000000000000 f5128ab492c03780bc0666bb3599b8479cc990aa chuckokc <chuckokc@gmail.com> 1738259516 -0600	clone: from https://github.com/chuckokc/fire-dynamics-calculator.git
+f5128ab492c03780bc0666bb3599b8479cc990aa e1236c8d13b6cd0939bad0e9260130478084c74c chuckokc <chuckokc@gmail.com> 1738260369 -0600	commit: Update import paths for local development
+e1236c8d13b6cd0939bad0e9260130478084c74c db345339da61000c0d8a034c73ece1b8270903b4 chuckokc <chuckokc@gmail.com> 1738274635 -0600	commit: Add point source radiation calculator and tests
+db345339da61000c0d8a034c73ece1b8270903b4 15acb4020eb0ab54d4f2a3ed3534d100afa6af0d chuckokc <chuckokc@gmail.com> 1738276983 -0600	commit: Add material properties module to support core calculations. Complete core implementation of heat release rate, flame height, point source radiation, and flashover estimation modules.
+15acb4020eb0ab54d4f2a3ed3534d100afa6af0d f1756ef07fed405b5c215290e4b5eee9acf3d0e8 chuckokc <chuckokc@gmail.com> 1738293254 -0600	commit: Update material properties with verified values from Quintiere (2016) and corresponding tests
+f1756ef07fed405b5c215290e4b5eee9acf3d0e8 94dab3fbd026237678edfc4c966af9e1c7ab3ca1 chuckokc <chuckokc@gmail.com> 1738295107 -0600	commit: Refine all core modules with NUREG-1805 methodologies and prepare for UI development
+94dab3fbd026237678edfc4c966af9e1c7ab3ca1 3921d9fb85b5bde8458ca51e670f50b6b1ff6c04 chuckokc <chuckokc@gmail.com> 1749078049 -0500	commit: Add T-squared calculator and update flame height calculator for bidirectional calculations
+3921d9fb85b5bde8458ca51e670f50b6b1ff6c04 f40444ac9e2b5c16117c196ba3e4d7c0147ebbaa chuckokc <chuckokc@gmail.com> 1749078269 -0500	commit (merge): Merge remote changes and add T-squared calculator with bidirectional flame height calculator
+f40444ac9e2b5c16117c196ba3e4d7c0147ebbaa f8cc13106e10b1eaa8169172578becf67ab824ef chuckokc <chuckokc@gmail.com> 1749078757 -0500	commit: Remove duplicate files from root, keep frontend folder structure
+f8cc13106e10b1eaa8169172578becf67ab824ef 9865aa8ea96545b0fa601484696ab4ca1cd61ea9 chuckokc <chuckokc@gmail.com> 1749078757 -0500	commit: Add frontend as regular directory, not submodule
+9865aa8ea96545b0fa601484696ab4ca1cd61ea9 d0ea4e5eda74888b2bee2f7cf8735774c480c278 chuckokc <chuckokc@gmail.com> 1749080966 -0500	commit: Remove duplicate backend folder from frontend
+d0ea4e5eda74888b2bee2f7cf8735774c480c278 eaaad5fd4dcb852f4d8d903ec9d959c32d49f150 chuckokc <chuckokc@gmail.com> 1749086442 -0500	commit: Add copy results button to all calculators
+eaaad5fd4dcb852f4d8d903ec9d959c32d49f150 4cd8334d31fce7cd407e825a58c15f8ce88107fd chuckokc <chuckokc@gmail.com> 1749088570 -0500	commit: Add visual flame height indicator to FlameHeightCalculator
+4cd8334d31fce7cd407e825a58c15f8ce88107fd 8f794cbc6d7f86e2e73bbb3c1d460a5a53babbe5 chuckokc <chuckokc@gmail.com> 1749090462 -0500	commit: changed message on Flame Height
+8f794cbc6d7f86e2e73bbb3c1d460a5a53babbe5 284921c3e09136fdf5df23d1f332721ac6ce4573 chuckokc <chuckokc@gmail.com> 1749096822 -0500	commit: Point Source Radiation visualizer update
+284921c3e09136fdf5df23d1f332721ac6ce4573 e8eecaca7f24fb0d1bd4885ca5853bfba761ed3e chuckokc <chuckokc@gmail.com> 1749097964 -0500	commit: Adjustments to Point Source Vizualizer
+e8eecaca7f24fb0d1bd4885ca5853bfba761ed3e 9dbd4bbad924b7bfc3ae3ceadd85eee5e53513d4 chuckokc <chuckokc@gmail.com> 1749102919 -0500	commit: T-Squared Vizualization
+9dbd4bbad924b7bfc3ae3ceadd85eee5e53513d4 4169ca22d8caabaae2753704d60ff239214fbd13 chuckokc <chuckokc@gmail.com> 1749104333 -0500	commit: Cache clear correction 'v1.0.1'
+4169ca22d8caabaae2753704d60ff239214fbd13 e388b133af102d0708ab3723f5430c5213203720 chuckokc <chuckokc@gmail.com> 1749104931 -0500	commit: Fix reload loop
+e388b133af102d0708ab3723f5430c5213203720 5cfacdc7b4a446a727fe2ed3cd37a61268417136 chuckokc <chuckokc@gmail.com> 1749105209 -0500	commit: Fix reload loop
+5cfacdc7b4a446a727fe2ed3cd37a61268417136 f2ad9fbbf555e0143f44ceaf872becc4a3f36d9a chuckokc <chuckokc@gmail.com> 1749106690 -0500	commit: Vite config js correction
+f2ad9fbbf555e0143f44ceaf872becc4a3f36d9a c6f9d4af3d74a16aad1daeff89d0d1bb69b6ce4e chuckokc <chuckokc@gmail.com> 1749107416 -0500	commit: Clearing Cache with Vite
+c6f9d4af3d74a16aad1daeff89d0d1bb69b6ce4e 128bf7612ead5db2312ca6d45bdb2393813c9865 chuckokc <chuckokc@gmail.com> 1749110330 -0500	commit: Removed flashover visualizer
+128bf7612ead5db2312ca6d45bdb2393813c9865 bf38c01d6775ff5b29aeb0f6187c71f2ddbc14c7 chuckokc <chuckokc@gmail.com> 1749139495 -0500	commit: Calc history added to the HRR calculator
+bf38c01d6775ff5b29aeb0f6187c71f2ddbc14c7 42389582ee64b1199d1e66bf046028cad4c4ac85 chuckokc <chuckokc@gmail.com> 1749143988 -0500	commit: Add calculation history to all calculators
+42389582ee64b1199d1e66bf046028cad4c4ac85 268e8f63f2ee64490062b759b47efcd63c009331 chuckokc <chuckokc@gmail.com> 1749144221 -0500	commit: Add calculation history to all calculators
+268e8f63f2ee64490062b759b47efcd63c009331 acb0330d50119c62c8e9add280cff50588e21f06 chuckokc <chuckokc@gmail.com> 1749150065 -0500	commit: Add dark mode support and calculation history - v1.2.0
+acb0330d50119c62c8e9add280cff50588e21f06 dadf1fd25242df0e1f29a1cb9c863e32cba046cc chuckokc <chuckokc@gmail.com> 1749151429 -0500	commit: Fixed dark mode issue in Reference Data_T^2
+dadf1fd25242df0e1f29a1cb9c863e32cba046cc c3de292155936632c33db5533c7d62aead0e5f08 chuckokc <chuckokc@gmail.com> 1749155329 -0500	commit: v1.2.2 - Fix mobile responsiveness for T-Squared and Point Source calculators
+c3de292155936632c33db5533c7d62aead0e5f08 2524238751d5a48939d061c930e653ee72c3fbf4 chuckokc <chuckokc@gmail.com> 1749155597 -0500	commit: v1.2.3 - Fix mobile responsiveness for T-Squared and Point Source calculators
+2524238751d5a48939d061c930e653ee72c3fbf4 7b6bc86095aa158e51fe9745507c6ce1458aa826 chuckokc <chuckokc@gmail.com> 1749851016 -0500	merge development: Fast-forward
+7b6bc86095aa158e51fe9745507c6ce1458aa826 0b3de9400a2747b6d17c21fc55825f9b1b2d33c4 chuckokc <chuckokc@gmail.com> 1749851711 -0500	commit: feat: Add production configs for backend
+0b3de9400a2747b6d17c21fc55825f9b1b2d33c4 634155953935f22250a6c1c0fda1b542456c895e chuckokc <chuckokc@gmail.com> 1749853158 -0500	commit: feat: Connect frontend to production API
+634155953935f22250a6c1c0fda1b542456c895e 4224957e01c188e8a0c8844fb5c23cfcb6d72818 chuckokc <chuckokc@gmail.com> 1749854988 -0500	commit: refactor: Restructure backend for production deployment
+4224957e01c188e8a0c8844fb5c23cfcb6d72818 7d2c2c13480526efca4c254f0a7b102c71e545df chuckokc <chuckokc@gmail.com> 1749855821 -0500	commit: fix: Simplify backend structure for deployment
+7d2c2c13480526efca4c254f0a7b102c71e545df 163355adc595192b7ab6634d01f6933fa3addcf5 chuckokc <chuckokc@gmail.com> 1749856423 -0500	commit: fix: Add wsgi.py entrypoint for production
+163355adc595192b7ab6634d01f6933fa3addcf5 f92435d352ec45c485f7663515c29b0d3df4afc8 chuckokc <chuckokc@gmail.com> 1749857529 -0500	commit: refactor: Finalize backend structure for production
+f92435d352ec45c485f7663515c29b0d3df4afc8 1af587f099e1ec91a423cf2c7ad9ab66f56c64e2 chuckokc <chuckokc@gmail.com> 1749860526 -0500	commit: Hopefully the last change to get Render working with code
+1af587f099e1ec91a423cf2c7ad9ab66f56c64e2 e1a4f49a1a666f02032daf92c77e06db07b8a588 chuckokc <chuckokc@gmail.com> 1749860666 -0500	commit: Finialize to play nicely with Render
