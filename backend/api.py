@@ -13,7 +13,7 @@ from flask_cors import CORS
 
 # Now you can import your calculator
 from app.calculations.area_volume import AreaVolumeCalculator
-from app.calculations.flashover import FlashoverCalculator # <-- ADD THIS LINE
+from app.calculations.flashover import FlashoverCalculator
 from app.utils.unit_converter import UnitConverter
 # backend/api.py
 from app.calculations.flashover import FlashoverCalculator

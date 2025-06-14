@@ -1,5 +1,5 @@
-from utils.unit_converter import UnitConverter
-from calculations.material_properties import MaterialProperties
+from ..utils.unit_converter import UnitConverter
+from .material_properties import MaterialProperties
 
 class FlashoverCalculator:
     """
