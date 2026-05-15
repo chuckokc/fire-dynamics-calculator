@@ -157,13 +157,18 @@ const FlashoverCalculator = () => {
               <br />
               Q̇fo = Heat release rate required for flashover
               <br />
-              hk = √(kρc) = Thermal inertia of walls
+              hk = √(kρc/t) = Wall heat transfer coefficient (kW/m²·K)
+              <br />
+              kρc = Wall thermal inertia (from material selection)
               <br />
               AT = Total surface area of compartment
               <br />
               AO = Area of ventilation opening
               <br />
               HO = Height of ventilation opening
+            </Chakra.Text>
+            <Chakra.Text fontSize="sm" color="gray.600" mt={3} fontStyle="italic">
+              Note: h_k assumes t = 600 s after ignition (NUREG-1805 transient regime, typical pre-flashover time). Results may differ for very short or very long fire durations.
             </Chakra.Text>
           </Chakra.CardBody>
         </Chakra.Card>
