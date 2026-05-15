@@ -580,7 +580,7 @@ const TSquaredCalculator = () => {
               min={0}
               step={0.001}
             >
-              <Chakra.NumberInputField />
+              <Chakra.NumberInputField inputMode="decimal" />
             </Chakra.NumberInput>
             <Chakra.Text fontSize="sm" color="gray.600">
               {units === 'SI' ? 'kW/s²' : 'BTU/s³'}
@@ -597,7 +597,7 @@ const TSquaredCalculator = () => {
               onChange={(vs) => setTime(vs)}
               min={0}
             >
-              <Chakra.NumberInputField />
+              <Chakra.NumberInputField inputMode="decimal" />
             </Chakra.NumberInput>
             <Chakra.Text fontSize="sm" color="gray.600">seconds</Chakra.Text>
           </Chakra.FormControl>
@@ -609,7 +609,7 @@ const TSquaredCalculator = () => {
               onChange={(vs) => setHeatRelease(vs)}
               min={0}
             >
-              <Chakra.NumberInputField />
+              <Chakra.NumberInputField inputMode="decimal" />
             </Chakra.NumberInput>
             <Chakra.Text fontSize="sm" color="gray.600">
               {units === 'SI' ? 'kW' : 'BTU/s'}

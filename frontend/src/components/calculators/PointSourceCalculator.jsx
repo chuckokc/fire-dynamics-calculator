@@ -396,7 +396,7 @@ const PointSourceCalculator = () => {
             onChange={(vs) => setHeatRelease(vs)}
             min={0}
           >
-            <Chakra.NumberInputField />
+            <Chakra.NumberInputField inputMode="decimal" />
           </Chakra.NumberInput>
           <Chakra.Text fontSize="sm" color="gray.600">
             {units === 'SI' ? 'kW' : 'BTU/s'}
@@ -410,7 +410,7 @@ const PointSourceCalculator = () => {
             onChange={(vs) => setDistance(vs)}
             min={0}
           >
-            <Chakra.NumberInputField />
+            <Chakra.NumberInputField inputMode="decimal" />
           </Chakra.NumberInput>
           <Chakra.Text fontSize="sm" color="gray.600">
             {units === 'SI' ? 'm' : 'ft'}
@@ -426,7 +426,7 @@ const PointSourceCalculator = () => {
             max={1}
             step={0.1}
           >
-            <Chakra.NumberInputField />
+            <Chakra.NumberInputField inputMode="decimal" />
           </Chakra.NumberInput>
           <Chakra.Text fontSize="sm" color="gray.600">
             Typical value: 0.3 (30% of total energy)

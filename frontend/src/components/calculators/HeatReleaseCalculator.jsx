@@ -225,7 +225,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
       onChange={(vs) => setManualMassFlux(vs)}
       min={0}
     >
-      <Chakra.NumberInputField />
+      <Chakra.NumberInputField inputMode="decimal" />
     </Chakra.NumberInput>
     <Chakra.Text fontSize="sm" color="gray.600">g/m²-s</Chakra.Text>
   </Chakra.FormControl>
@@ -238,7 +238,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
             onChange={(vs) => setBurningArea(vs)}
             min={0}
           >
-            <Chakra.NumberInputField />
+            <Chakra.NumberInputField inputMode="decimal" />
           </Chakra.NumberInput>
           <Chakra.Text fontSize="sm" color="gray.600">
             {units === 'SI' ? 'm²' : 'ft²'}

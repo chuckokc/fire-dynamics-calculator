@@ -136,7 +136,7 @@ const ReferenceGuide = () => {
   ];
 
   return (
-    <Chakra.Box p={6} maxW="6xl" mx="auto">
+    <Chakra.Box p={{ base: 3, md: 6 }} maxW="6xl" mx="auto">
       <Chakra.VStack spacing={6} align="stretch">
         <Chakra.Text fontSize="sm" color="gray.600">
           Fire Dynamics Calculator equations (U.S. Nuclear Regulatory Commission, 2013) and data compiled from:
@@ -160,7 +160,7 @@ const ReferenceGuide = () => {
           <Chakra.TabPanels>
             {/* Peak Heat Release Rate Panel */}
             <Chakra.TabPanel>
-              <Chakra.Table variant="simple">
+              <Chakra.TableContainer><Chakra.Table variant="simple" size={{ base: 'sm', md: 'md' }}>
                 <Chakra.Thead>
                   <Chakra.Tr>
                     <Chakra.Th>Fuel</Chakra.Th>
@@ -179,12 +179,12 @@ const ReferenceGuide = () => {
                     </Chakra.Tr>
                   ))}
                 </Chakra.Tbody>
-              </Chakra.Table>
+              </Chakra.Table></Chakra.TableContainer>
             </Chakra.TabPanel>
 
             {/* Steady State Heat Release Rate Panel */}
             <Chakra.TabPanel>
-              <Chakra.Table variant="simple">
+              <Chakra.TableContainer><Chakra.Table variant="simple" size={{ base: 'sm', md: 'md' }}>
                 <Chakra.Thead>
                   <Chakra.Tr>
                     <Chakra.Th>Fuel</Chakra.Th>
@@ -199,7 +199,7 @@ const ReferenceGuide = () => {
                     </Chakra.Tr>
                   ))}
                 </Chakra.Tbody>
-              </Chakra.Table>
+              </Chakra.Table></Chakra.TableContainer>
             </Chakra.TabPanel>
 
             {/* Material Properties Panel */}
@@ -216,7 +216,7 @@ const ReferenceGuide = () => {
                       <Chakra.AccordionIcon />
                     </Chakra.AccordionButton>
                     <Chakra.AccordionPanel>
-                      <Chakra.Table variant="simple">
+                      <Chakra.TableContainer><Chakra.Table variant="simple" size={{ base: 'sm', md: 'md' }}>
                         <Chakra.Thead>
                           <Chakra.Tr>
                             <Chakra.Th>Material</Chakra.Th>
@@ -231,7 +231,7 @@ const ReferenceGuide = () => {
                             </Chakra.Tr>
                           ))}
                         </Chakra.Tbody>
-                      </Chakra.Table>
+                      </Chakra.Table></Chakra.TableContainer>
                     </Chakra.AccordionPanel>
                   </Chakra.AccordionItem>
                 ))}
@@ -240,7 +240,7 @@ const ReferenceGuide = () => {
 
             {/* Mass Flux Values Panel */}
             <Chakra.TabPanel>
-              <Chakra.Table variant="simple">
+              <Chakra.TableContainer><Chakra.Table variant="simple" size={{ base: 'sm', md: 'md' }}>
                 <Chakra.Thead>
                   <Chakra.Tr>
                     <Chakra.Th>Fuel</Chakra.Th>
@@ -255,7 +255,7 @@ const ReferenceGuide = () => {
                     </Chakra.Tr>
                   ))}
                 </Chakra.Tbody>
-              </Chakra.Table>
+              </Chakra.Table></Chakra.TableContainer>
             </Chakra.TabPanel>
 
             {/* T-Squared Fire Growth Panel */}
@@ -275,7 +275,7 @@ const ReferenceGuide = () => {
                 {/* Standard Growth Rates */}
                 <Chakra.Box>
                   <Chakra.Text fontSize="md" fontWeight="bold" mb={2}>Standard Fire Growth Rates</Chakra.Text>
-                  <Chakra.Table variant="simple" size="sm">
+                  <Chakra.TableContainer><Chakra.Table variant="simple" size="sm">
                     <Chakra.Thead>
                       <Chakra.Tr>
                         <Chakra.Th>Category</Chakra.Th>
@@ -294,7 +294,7 @@ const ReferenceGuide = () => {
                         </Chakra.Tr>
                       ))}
                     </Chakra.Tbody>
-                  </Chakra.Table>
+                  </Chakra.Table></Chakra.TableContainer>
                 </Chakra.Box>
 
                 {/* Fire Growth Times */}
@@ -305,7 +305,7 @@ const ReferenceGuide = () => {
                   <Chakra.Text fontSize="sm" color="gray.600" mb={2}>
                     Time to reach 1 MW assuming 100% combustion efficiency
                   </Chakra.Text>
-                  <Chakra.Table variant="simple" size="sm">
+                  <Chakra.TableContainer><Chakra.Table variant="simple" size="sm">
                     <Chakra.Thead>
                       <Chakra.Tr>
                         <Chakra.Th>Combustible Configuration</Chakra.Th>
@@ -320,7 +320,7 @@ const ReferenceGuide = () => {
                         </Chakra.Tr>
                       ))}
                     </Chakra.Tbody>
-                  </Chakra.Table>
+                  </Chakra.Table></Chakra.TableContainer>
                   <Chakra.Text fontSize="xs" color="gray.500" mt={2}>
                     Note: Pe = polyester; Cot = cotton; PE = polyethylene; PS = polystyrene; 
                     PVC = polyvinyl chloride; PP = polypropylene; PU = polyurethane; 

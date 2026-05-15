@@ -369,7 +369,7 @@ const FlameHeightCalculator = () => {
               onChange={(vs) => setHeatRelease(vs)}
               min={0}
             >
-              <Chakra.NumberInputField />
+              <Chakra.NumberInputField inputMode="decimal" />
             </Chakra.NumberInput>
             <Chakra.Text fontSize="sm" color="gray.600">
               {units === 'SI' ? 'kW' : 'BTU/s'}
@@ -385,7 +385,7 @@ const FlameHeightCalculator = () => {
               onChange={(vs) => setDiameter(vs)}
               min={0}
             >
-              <Chakra.NumberInputField />
+              <Chakra.NumberInputField inputMode="decimal" />
             </Chakra.NumberInput>
             <Chakra.Text fontSize="sm" color="gray.600">
               {units === 'SI' ? 'm' : 'ft'}
@@ -401,7 +401,7 @@ const FlameHeightCalculator = () => {
               onChange={(vs) => setFlameHeight(vs)}
               min={0}
             >
-              <Chakra.NumberInputField />
+              <Chakra.NumberInputField inputMode="decimal" />
             </Chakra.NumberInput>
             <Chakra.Text fontSize="sm" color="gray.600">
               {units === 'SI' ? 'm' : 'ft'}
