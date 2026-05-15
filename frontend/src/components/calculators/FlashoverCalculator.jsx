@@ -17,26 +17,36 @@ const FlashoverCalculator = () => {
   const [showHistory, setShowHistory] = useState(false);
 
   // Material thermal properties (k in kW/m/K, ρ in kg/m³, c in kJ/kg/K)
+  // Values from NUREG-1805 / SFPE Handbook. kρc (thermal inertia) is shown
+  // for reference; it is used in the MQH heat-transfer coefficient h_k.
   const MATERIALS = {
     gypsum: {
       name: 'Gypsum Board',
-      k: 0.0016,
-      ρ: 790,
-      c: 1.09
+      k: 0.00017, // ~0.17 W/m·K (SFPE Handbook)
+      ρ: 960,
+      c: 1.1
+      // kρc ≈ 0.18 (kW/m²·K)²·s
     },
     concrete: {
       name: 'Concrete',
-      k: 0.0016,
-      ρ: 2300,
-      c: 0.92
+      k: 0.0016, // normal-weight
+      ρ: 2400,
+      c: 0.75
+      // kρc ≈ 2.88
     },
     brick: {
       name: 'Brick',
       k: 0.0008,
-      ρ: 1600,
-      c: 0.84
+      ρ: 2600,
+      c: 0.92
+      // kρc ≈ 1.91
     }
   };
+
+  // Characteristic time after ignition for h_k calculation (NUREG-1805).
+  // 600 s is a typical pre-flashover duration; in the transient regime
+  // (t < thermal penetration time t_p), h_k = sqrt(kρc / t).
+  const T_CHAR_SEC = 600;
 
   // Unit conversion functions
   const convertLength = (value, toImperial) => {
@@ -111,10 +121,12 @@ const FlashoverCalculator = () => {
 
     // Get material properties
     const material = MATERIALS[surfaceMaterial];
-    const hk = Math.sqrt(material.k * material.ρ * material.c);
+    // MQH heat-transfer coefficient: h_k = sqrt(kρc / t)  [kW/m²·K]
+    // (NUREG-1805, transient regime t < t_p). Hardcoded t = 600 s.
+    const hk = Math.sqrt((material.k * material.ρ * material.c) / T_CHAR_SEC);
 
     // Calculate using MQH correlation
-    const QfoMQH = 610 * Math.sqrt(hk * AT * Math.sqrt(AO * HO));
+    const QfoMQH = 610 * Math.sqrt(hk * AT * AO * Math.sqrt(HO));
 
     // Calculate using Thomas correlation
     const QfoThomas = 7.8 * AT + 378 * AO * Math.sqrt(HO);
@@ -168,13 +180,13 @@ const FlashoverCalculator = () => {
   }, [roomHeight, roomWidth, roomLength, openingHeight, openingWidth, surfaceMaterial, units]);
 
   return (
-    <Chakra.Box p={6} maxW="2xl" mx="auto">
+    <Chakra.Box p={{ base: 4, md: 6 }} maxW="2xl" mx="auto">
       <Chakra.VStack spacing={6} align="stretch">
         <Chakra.Card variant="outline">
           <Chakra.CardBody>
             <Chakra.Text fontSize="lg" fontWeight="bold">Flashover Correlations:</Chakra.Text>
             <Chakra.Text fontSize="xl" fontFamily="mono">
-              MQH: Q̇fo = 610(hkAT√AO√HO)^(1/2)
+              MQH: Q̇fo = 610(hkATAO√HO)^(1/2)
               <br />
               Thomas: Q̇fo = 7.8AT + 378AO√HO
               <br />
@@ -185,13 +197,18 @@ const FlashoverCalculator = () => {
               <br />
               Q̇fo = Heat release rate required for flashover
               <br />
-              hk = √(kρc) = Thermal inertia of walls
+              hk = √(kρc/t) = Wall heat transfer coefficient (kW/m²·K)
+              <br />
+              kρc = Wall thermal inertia (from material selection)
               <br />
               AT = Total surface area of compartment
               <br />
               AO = Area of ventilation opening
               <br />
               HO = Height of ventilation opening
+            </Chakra.Text>
+            <Chakra.Text fontSize="sm" color="gray.600" mt={3} fontStyle="italic">
+              Note: h_k assumes t = 600 s after ignition (NUREG-1805 transient regime, typical pre-flashover time). Results may differ for very short or very long fire durations.
             </Chakra.Text>
           </Chakra.CardBody>
         </Chakra.Card>
@@ -203,7 +220,7 @@ const FlashoverCalculator = () => {
             onChange={(vs) => setRoomHeight(vs)}
             min={0}
           >
-            <Chakra.NumberInputField />
+            <Chakra.NumberInputField inputMode="decimal" />
           </Chakra.NumberInput>
           <Chakra.Text fontSize="sm" color="gray.600">
             {units === 'SI' ? 'm' : 'ft'}
@@ -217,7 +234,7 @@ const FlashoverCalculator = () => {
             onChange={(vs) => setRoomWidth(vs)}
             min={0}
           >
-            <Chakra.NumberInputField />
+            <Chakra.NumberInputField inputMode="decimal" />
           </Chakra.NumberInput>
           <Chakra.Text fontSize="sm" color="gray.600">
             {units === 'SI' ? 'm' : 'ft'}
@@ -231,7 +248,7 @@ const FlashoverCalculator = () => {
             onChange={(vs) => setRoomLength(vs)}
             min={0}
           >
-            <Chakra.NumberInputField />
+            <Chakra.NumberInputField inputMode="decimal" />
           </Chakra.NumberInput>
           <Chakra.Text fontSize="sm" color="gray.600">
             {units === 'SI' ? 'm' : 'ft'}
@@ -245,7 +262,7 @@ const FlashoverCalculator = () => {
             onChange={(vs) => setOpeningHeight(vs)}
             min={0}
           >
-            <Chakra.NumberInputField />
+            <Chakra.NumberInputField inputMode="decimal" />
           </Chakra.NumberInput>
           <Chakra.Text fontSize="sm" color="gray.600">
             {units === 'SI' ? 'm' : 'ft'}
@@ -259,7 +276,7 @@ const FlashoverCalculator = () => {
             onChange={(vs) => setOpeningWidth(vs)}
             min={0}
           >
-            <Chakra.NumberInputField />
+            <Chakra.NumberInputField inputMode="decimal" />
           </Chakra.NumberInput>
           <Chakra.Text fontSize="sm" color="gray.600">
             {units === 'SI' ? 'm' : 'ft'}

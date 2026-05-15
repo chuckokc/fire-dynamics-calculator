@@ -57,18 +57,24 @@ const MainApp = () => {
         </Chakra.Box>
       )}
 
-      <Chakra.Container maxW="container.xl" py={8}>
+      <Chakra.Container maxW="container.xl" py={{ base: 4, md: 8 }} px={{ base: 3, md: 4 }}>
         {/* Header section with title, description, and feedback button */}
-        <Chakra.VStack spacing={2} align="stretch" mb={8}>
-          <Chakra.Flex justify="space-between" align="center" width="100%">
+        <Chakra.VStack spacing={2} align="stretch" mb={{ base: 4, md: 8 }}>
+          <Chakra.Flex
+            justify="space-between"
+            align={{ base: 'flex-start', md: 'center' }}
+            direction={{ base: 'column', md: 'row' }}
+            gap={3}
+            width="100%"
+          >
             <Chakra.VStack align="stretch" spacing={1}>
-              <Chakra.Heading>Fire Dynamics Calculator</Chakra.Heading>
-              <Chakra.Text color="gray.600">
+              <Chakra.Heading size={{ base: 'md', md: 'lg' }}>Fire Dynamics Calculator</Chakra.Heading>
+              <Chakra.Text color="gray.600" fontSize={{ base: 'sm', md: 'md' }}>
                 Professional fire investigation tools based on NUREG-1805 methodology
               </Chakra.Text>
             </Chakra.VStack>
-            
-            <Chakra.HStack spacing={2}>
+
+            <Chakra.HStack spacing={2} flexShrink={0}>
               <Chakra.Text fontSize="xs" color="gray.500">v{APP_VERSION}</Chakra.Text>
               <Chakra.IconButton
                 icon={colorMode === 'light' ? <Moon size={16} /> : <Sun size={16} />}
@@ -92,13 +98,13 @@ const MainApp = () => {
 
         {/* Main calculator interface with tabs */}
         <Chakra.Tabs variant="enclosed" borderColor={borderColor} isLazy>
-          <Chakra.TabList>
-            <Chakra.Tab>Heat Release Rate</Chakra.Tab>
-            <Chakra.Tab>Flame Height</Chakra.Tab>
-            <Chakra.Tab>Point Source Radiation</Chakra.Tab>
-            <Chakra.Tab>Flashover</Chakra.Tab>
-            <Chakra.Tab>T-Squared Growth</Chakra.Tab>
-            <Chakra.Tab>Reference Data</Chakra.Tab>
+          <Chakra.TabList overflowX="auto" overflowY="hidden" sx={{ scrollbarWidth: 'thin', '&::-webkit-scrollbar': { height: '4px' } }}>
+            <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Heat Release Rate</Chakra.Tab>
+            <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Flame Height</Chakra.Tab>
+            <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Point Source Radiation</Chakra.Tab>
+            <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Flashover</Chakra.Tab>
+            <Chakra.Tab flexShrink={0} whiteSpace="nowrap">T-Squared Growth</Chakra.Tab>
+            <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Reference Data</Chakra.Tab>
           </Chakra.TabList>
 
           <Chakra.TabPanels>
