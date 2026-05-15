@@ -74,7 +74,7 @@ const FlashoverCalculator = () => {
     const hk = Math.sqrt(material.k * material.ρ * material.c);
 
     // Calculate using MQH correlation
-    const QfoMQH = 610 * Math.sqrt(hk * AT * Math.sqrt(AO * HO));
+    const QfoMQH = 610 * Math.sqrt(hk * AT * AO * Math.sqrt(HO));
 
     // Calculate using Thomas correlation
     const QfoThomas = 7.8 * AT + 378 * AO * Math.sqrt(HO);
@@ -134,7 +134,7 @@ const FlashoverCalculator = () => {
           <Chakra.CardBody>
             <Chakra.Text fontSize="lg" fontWeight="bold">Flashover Correlations:</Chakra.Text>
             <Chakra.Text fontSize="xl" fontFamily="mono">
-              MQH: Q̇fo = 610(hkAT√AO√HO)^(1/2)
+              MQH: Q̇fo = 610(hkATAO√HO)^(1/2)
               <br />
               Thomas: Q̇fo = 7.8AT + 378AO√HO
               <br />
