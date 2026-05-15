@@ -136,9 +136,9 @@ const ReferenceGuide = () => {
   ];
 
   return (
-    <Chakra.Box p={{ base: 3, md: 6 }} maxW="6xl" mx="auto">
+    <Chakra.Box p={{ base: 3, md: 6 }} maxW="6xl" mx="auto" w="100%" overflow="hidden">
       <Chakra.VStack spacing={6} align="stretch">
-        <Chakra.Text fontSize="sm" color="gray.600">
+        <Chakra.Text fontSize="sm" color="gray.600" sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
           Fire Dynamics Calculator equations (U.S. Nuclear Regulatory Commission, 2013) and data compiled from:
           <Chakra.UnorderedList>
           <Chakra.ListItem>U.S. Nuclear Regulatory Commission. (2013). Fire dynamics tools (FDTs): Quantitative fire hazard analysis methods for the U.S. Nuclear Regulatory Commission fire protection inspection program (NUREG-1805, Supplement 1, Volumes 1 & 2). Office of Nuclear Reactor Research. https://www.nrc.gov/reading-rm/doc-collections/nuregs/staff/sr1805/s1/index.html.</Chakra.ListItem>
@@ -148,19 +148,19 @@ const ReferenceGuide = () => {
           </Chakra.UnorderedList>
         </Chakra.Text>
 
-        <Chakra.Tabs isFitted variant="enclosed">
-          <Chakra.TabList mb="1em">
-            <Chakra.Tab>Peak Heat Release Rates</Chakra.Tab>
-            <Chakra.Tab>Steady State HRR</Chakra.Tab>
-            <Chakra.Tab>Material Properties</Chakra.Tab>
-            <Chakra.Tab>Mass Flux Values</Chakra.Tab>
-            <Chakra.Tab>T-Squared Fire Growth</Chakra.Tab>
+        <Chakra.Tabs variant="enclosed">
+          <Chakra.TabList mb="1em" overflowX="auto" overflowY="hidden" sx={{ scrollbarWidth: 'thin', '&::-webkit-scrollbar': { height: '4px' } }}>
+            <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Peak Heat Release Rates</Chakra.Tab>
+            <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Steady State HRR</Chakra.Tab>
+            <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Material Properties</Chakra.Tab>
+            <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Mass Flux Values</Chakra.Tab>
+            <Chakra.Tab flexShrink={0} whiteSpace="nowrap">T-Squared Fire Growth</Chakra.Tab>
           </Chakra.TabList>
 
           <Chakra.TabPanels>
             {/* Peak Heat Release Rate Panel */}
             <Chakra.TabPanel>
-              <Chakra.TableContainer><Chakra.Table variant="simple" size={{ base: 'sm', md: 'md' }}>
+              <Chakra.TableContainer whiteSpace="normal" maxW="100%"><Chakra.Table variant="simple" size={{ base: 'sm', md: 'md' }}>
                 <Chakra.Thead>
                   <Chakra.Tr>
                     <Chakra.Th>Fuel</Chakra.Th>
@@ -184,7 +184,7 @@ const ReferenceGuide = () => {
 
             {/* Steady State Heat Release Rate Panel */}
             <Chakra.TabPanel>
-              <Chakra.TableContainer><Chakra.Table variant="simple" size={{ base: 'sm', md: 'md' }}>
+              <Chakra.TableContainer whiteSpace="normal" maxW="100%"><Chakra.Table variant="simple" size={{ base: 'sm', md: 'md' }}>
                 <Chakra.Thead>
                   <Chakra.Tr>
                     <Chakra.Th>Fuel</Chakra.Th>
@@ -216,7 +216,7 @@ const ReferenceGuide = () => {
                       <Chakra.AccordionIcon />
                     </Chakra.AccordionButton>
                     <Chakra.AccordionPanel>
-                      <Chakra.TableContainer><Chakra.Table variant="simple" size={{ base: 'sm', md: 'md' }}>
+                      <Chakra.TableContainer whiteSpace="normal" maxW="100%"><Chakra.Table variant="simple" size={{ base: 'sm', md: 'md' }}>
                         <Chakra.Thead>
                           <Chakra.Tr>
                             <Chakra.Th>Material</Chakra.Th>
@@ -240,7 +240,7 @@ const ReferenceGuide = () => {
 
             {/* Mass Flux Values Panel */}
             <Chakra.TabPanel>
-              <Chakra.TableContainer><Chakra.Table variant="simple" size={{ base: 'sm', md: 'md' }}>
+              <Chakra.TableContainer whiteSpace="normal" maxW="100%"><Chakra.Table variant="simple" size={{ base: 'sm', md: 'md' }}>
                 <Chakra.Thead>
                   <Chakra.Tr>
                     <Chakra.Th>Fuel</Chakra.Th>
@@ -275,7 +275,7 @@ const ReferenceGuide = () => {
                 {/* Standard Growth Rates */}
                 <Chakra.Box>
                   <Chakra.Text fontSize="md" fontWeight="bold" mb={2}>Standard Fire Growth Rates</Chakra.Text>
-                  <Chakra.TableContainer><Chakra.Table variant="simple" size="sm">
+                  <Chakra.TableContainer whiteSpace="normal" maxW="100%"><Chakra.Table variant="simple" size="sm">
                     <Chakra.Thead>
                       <Chakra.Tr>
                         <Chakra.Th>Category</Chakra.Th>
@@ -305,7 +305,7 @@ const ReferenceGuide = () => {
                   <Chakra.Text fontSize="sm" color="gray.600" mb={2}>
                     Time to reach 1 MW assuming 100% combustion efficiency
                   </Chakra.Text>
-                  <Chakra.TableContainer><Chakra.Table variant="simple" size="sm">
+                  <Chakra.TableContainer whiteSpace="normal" maxW="100%"><Chakra.Table variant="simple" size="sm">
                     <Chakra.Thead>
                       <Chakra.Tr>
                         <Chakra.Th>Combustible Configuration</Chakra.Th>
