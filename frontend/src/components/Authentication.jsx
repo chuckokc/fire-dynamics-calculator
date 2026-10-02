@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Box,
   VStack,
@@ -14,27 +14,21 @@ import {
   Link,
   HStack,
   Divider,
-  useColorModeValue  // Add this import
 } from '@chakra-ui/react';
 import { Eye, EyeOff, Mail } from 'lucide-react';
 
 const Authentication = ({ onAuthenticated }) => {
-  const bgColor = useColorModeValue('gray.50', 'gray.900');
-  const cardBgColor = useColorModeValue('white', 'gray.800');
   const [accessCode, setAccessCode] = useState('');
   const [showCode, setShowCode] = useState(false);
   const toast = useToast();
 
-  useEffect(() => {
-    const isAuthenticated = localStorage.getItem('fireCalcAuth');
-    if (isAuthenticated === 'granted') {
-      onAuthenticated(true);
-    }
-  }, [onAuthenticated]);
-
   const verifyAccess = () => {
-    if (accessCode.toUpperCase() === 'QUINTIERE') {
-      localStorage.setItem('fireCalcAuth', 'granted');
+    if (accessCode.trim().toUpperCase() === 'QUINTIERE') {
+      try {
+        localStorage.setItem('fireCalcAuth', 'granted');
+      } catch {
+        // Storage unavailable: access lasts for this session only.
+      }
       onAuthenticated(true);
       toast({
         title: 'Access Granted',
@@ -54,24 +48,19 @@ const Authentication = ({ onAuthenticated }) => {
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      verifyAccess();
-    }
-  };
-
-  const handleFeedbackClick = () => {
-    window.location.href = 'mailto:chuckokc@gmail.com?subject=Fire Dynamics Calculator Feedback';
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    verifyAccess();
   };
 
   return (
-    <Container maxW="lg" py={10} minH="100vh" bg={bgColor}>
+    <Container maxW="lg" py={{ base: 6, md: 10 }} minH="100vh">
       <Box 
         w="full" 
         maxW="md" 
-        p={8} 
-        mt={20} 
-        bg={cardBgColor}  // Changed from "white"
+        p={{ base: 6, md: 8 }}
+        mt={{ base: 4, md: 20 }}
+        bg="bg.surface"
         borderRadius="lg" 
         boxShadow="lg"
         textAlign="center"
@@ -81,17 +70,23 @@ const Authentication = ({ onAuthenticated }) => {
             Fire Dynamics Calculator
           </Heading>
           
-          <Text fontSize="md" color="gray.600">
+          <Text fontSize="md" color="text.muted">
             Professional fire investigation tools based on NUREG-1805 methodology
           </Text>
 
+          <VStack as="form" spacing={6} w="full" onSubmit={handleSubmit}>
           <InputGroup size="lg">
             <Input
               type={showCode ? 'text' : 'password'}
               placeholder="Enter access code"
               value={accessCode}
               onChange={(e) => setAccessCode(e.target.value)}
-              onKeyPress={handleKeyPress}
+              autoCapitalize="characters"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="go"
+              aria-label="Access code"
             />
             <InputRightElement>
               <IconButton
@@ -104,28 +99,28 @@ const Authentication = ({ onAuthenticated }) => {
           </InputGroup>
 
           <Button
+            type="submit"
             colorScheme="blue"
             size="lg"
             width="full"
-            onClick={verifyAccess}
           >
             Access Calculator
           </Button>
+          </VStack>
 
           <Divider my={2} />
 
           <VStack spacing={2}>
-            <Text fontSize="sm" color="gray.500">
+            <Text fontSize="sm" color="text.subtle">
               With dedication from Chuck ❤️ Christine Carpenter
             </Text>
             
             <HStack spacing={2} justify="center">
               <Mail size={16} />
-              <Link 
-                fontSize="sm" 
-                color="blue.500" 
-                onClick={handleFeedbackClick}
-                cursor="pointer"
+              <Link
+                fontSize="sm"
+                color="accent.fg"
+                href="mailto:chuckokc@gmail.com?subject=Fire%20Dynamics%20Calculator%20Feedback"
               >
                 Provide Feedback
               </Link>
