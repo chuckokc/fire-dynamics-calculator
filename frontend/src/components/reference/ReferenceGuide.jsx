@@ -1,4 +1,3 @@
-import React from 'react';
 import * as Chakra from '@chakra-ui/react';
 
 const ReferenceGuide = () => {
@@ -9,8 +8,8 @@ const ReferenceGuide = () => {
     { fuel: 'Trash bag/paper trash', weightKg: '1.2-14.1', weightLb: '2.6-31', peakHRR: '120-350' },
     { fuel: 'PVC waiting room chair, metal frame', weightKg: '15.4', weightLb: '34', peakHRR: '270' },
     { fuel: 'Cotton easy chair', weightKg: '17.7-31.8', weightLb: '39-70', peakHRR: '290-370' },
-    { fuel: 'Christmas tree, dry', weightKg: '20-Jun', weightLb: '13-44', peakHRR: '3000-5000' },
-    { fuel: 'Polyurethane mattress', weightKg: '3.2-14.1', weightLb: '31-Jul', peakHRR: '810-2630' },
+    { fuel: 'Christmas tree, dry', weightKg: '6-20', weightLb: '13-44', peakHRR: '3000-5000' },
+    { fuel: 'Polyurethane mattress', weightKg: '3.2-14.1', weightLb: '7-31', peakHRR: '810-2630' },
     { fuel: 'Polyurethane easy chair', weightKg: '12.2-27.7', weightLb: '27-61', peakHRR: '1350-1990' },
     { fuel: 'Polyurethane sofa', weightKg: '51.3', weightLb: '113', peakHRR: '3120' }
   ];
@@ -138,23 +137,13 @@ const ReferenceGuide = () => {
   return (
     <Chakra.Box p={{ base: 3, md: 6 }} maxW="6xl" mx="auto" w="100%" overflow="hidden">
       <Chakra.VStack spacing={6} align="stretch">
-        <Chakra.Text fontSize="sm" color="gray.600" sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-          Fire Dynamics Calculator equations (U.S. Nuclear Regulatory Commission, 2013) and data compiled from:
-          <Chakra.UnorderedList>
-          <Chakra.ListItem>U.S. Nuclear Regulatory Commission. (2013). Fire dynamics tools (FDTs): Quantitative fire hazard analysis methods for the U.S. Nuclear Regulatory Commission fire protection inspection program (NUREG-1805, Supplement 1, Volumes 1 & 2). Office of Nuclear Reactor Research. https://www.nrc.gov/reading-rm/doc-collections/nuregs/staff/sr1805/s1/index.html.</Chakra.ListItem>
-            <Chakra.ListItem>Gorbett, G., Pharr, J., & Rockwell, S. (2016). Fire dynamics (2nd ed.). Pearson.</Chakra.ListItem>
-            <Chakra.ListItem>Quintiere, J. G. (2016). Principles of fire behavior (2nd ed.). CRC Press.</Chakra.ListItem>
-            <Chakra.ListItem>Fire protection handbook: Vol. I–II (20th ed.). (2008). NFPA.</Chakra.ListItem>
-          </Chakra.UnorderedList>
-        </Chakra.Text>
-
         <Chakra.Tabs variant="enclosed">
           <Chakra.TabList mb="1em" overflowX="auto" overflowY="hidden" sx={{ scrollbarWidth: 'thin', '&::-webkit-scrollbar': { height: '4px' } }}>
-            <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Peak Heat Release Rates</Chakra.Tab>
-            <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Steady State HRR</Chakra.Tab>
-            <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Material Properties</Chakra.Tab>
-            <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Mass Flux Values</Chakra.Tab>
-            <Chakra.Tab flexShrink={0} whiteSpace="nowrap">T-Squared Fire Growth</Chakra.Tab>
+            <Chakra.Tab flexShrink={0} whiteSpace="nowrap" minH="44px">Peak Heat Release Rates</Chakra.Tab>
+            <Chakra.Tab flexShrink={0} whiteSpace="nowrap" minH="44px">Steady State HRR</Chakra.Tab>
+            <Chakra.Tab flexShrink={0} whiteSpace="nowrap" minH="44px">Material Properties</Chakra.Tab>
+            <Chakra.Tab flexShrink={0} whiteSpace="nowrap" minH="44px">Mass Flux Values</Chakra.Tab>
+            <Chakra.Tab flexShrink={0} whiteSpace="nowrap" minH="44px">T-Squared Fire Growth</Chakra.Tab>
           </Chakra.TabList>
 
           <Chakra.TabPanels>
@@ -207,7 +196,7 @@ const ReferenceGuide = () => {
               <Chakra.Accordion allowMultiple>
                 {Object.entries(materialProperties).map(([category, materials], index) => (
                   <Chakra.AccordionItem key={index}>
-                    <Chakra.AccordionButton>
+                    <Chakra.AccordionButton minH="44px">
                       <Chakra.Box flex="1" textAlign="left">
                         <Chakra.Text fontWeight="bold" textTransform="capitalize">
                           {category}
@@ -264,7 +253,7 @@ const ReferenceGuide = () => {
                 {/* Formula and explanation */}
                 <Chakra.Box>
                   <Chakra.Text fontSize="lg" fontWeight="bold" mb={2}>T-Squared Fire Growth Model</Chakra.Text>
-                  <Chakra.Box bg={Chakra.useColorModeValue('gray.50', 'gray.700')} p={4} borderRadius="md">
+                  <Chakra.Box bg="bg.subtle" p={4} borderRadius="md">
                     <Chakra.Text fontSize="xl" fontFamily="mono" mb={2}>Q = αt²</Chakra.Text>
                     <Chakra.Text fontSize="sm">
                       Where: Q = heat release rate (kW), α = fire growth coefficient (kW/s²), t = time (s)
@@ -302,7 +291,7 @@ const ReferenceGuide = () => {
                   <Chakra.Text fontSize="md" fontWeight="bold" mb={2}>
                     Growth Times of Continuous-Growth Fires
                   </Chakra.Text>
-                  <Chakra.Text fontSize="sm" color="gray.600" mb={2}>
+                  <Chakra.Text fontSize="sm" color="text.muted" mb={2}>
                     Time to reach 1 MW assuming 100% combustion efficiency
                   </Chakra.Text>
                   <Chakra.TableContainer whiteSpace="normal" maxW="100%"><Chakra.Table variant="simple" size="sm">
@@ -321,12 +310,12 @@ const ReferenceGuide = () => {
                       ))}
                     </Chakra.Tbody>
                   </Chakra.Table></Chakra.TableContainer>
-                  <Chakra.Text fontSize="xs" color="gray.500" mt={2}>
+                  <Chakra.Text fontSize="xs" color="text.subtle" mt={2}>
                     Note: Pe = polyester; Cot = cotton; PE = polyethylene; PS = polystyrene; 
                     PVC = polyvinyl chloride; PP = polypropylene; PU = polyurethane; 
                     FRP = fiberglass-reinforced polyester. For SI units: 1 ft = 0.305 m.
                   </Chakra.Text>
-                  <Chakra.Text fontSize="xs" color="gray.500" mt={1}>
+                  <Chakra.Text fontSize="xs" color="text.subtle" mt={1}>
                     Source: NFPA Fire Protection Handbook, 2016 ed., Section 18, Chapter 4
                   </Chakra.Text>
                 </Chakra.Box>
@@ -334,6 +323,17 @@ const ReferenceGuide = () => {
             </Chakra.TabPanel>
           </Chakra.TabPanels>
         </Chakra.Tabs>
+
+        <Chakra.Box as="section" fontSize="sm" color="text.muted" sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+          <Chakra.Text fontWeight="semibold" color="chakra-body-text">Sources</Chakra.Text>
+          Fire Dynamics Calculator equations (U.S. Nuclear Regulatory Commission, 2013) and data compiled from:
+          <Chakra.UnorderedList>
+          <Chakra.ListItem>U.S. Nuclear Regulatory Commission. (2013). Fire dynamics tools (FDTs): Quantitative fire hazard analysis methods for the U.S. Nuclear Regulatory Commission fire protection inspection program (NUREG-1805, Supplement 1, Volumes 1 & 2). Office of Nuclear Reactor Research. https://www.nrc.gov/reading-rm/doc-collections/nuregs/staff/sr1805/s1/index.html.</Chakra.ListItem>
+            <Chakra.ListItem>Gorbett, G., Pharr, J., & Rockwell, S. (2016). Fire dynamics (2nd ed.). Pearson.</Chakra.ListItem>
+            <Chakra.ListItem>Quintiere, J. G. (2016). Principles of fire behavior (2nd ed.). CRC Press.</Chakra.ListItem>
+            <Chakra.ListItem>Fire protection handbook: Vol. I–II (20th ed.). (2008). NFPA.</Chakra.ListItem>
+          </Chakra.UnorderedList>
+        </Chakra.Box>
       </Chakra.VStack>
     </Chakra.Box>
   );

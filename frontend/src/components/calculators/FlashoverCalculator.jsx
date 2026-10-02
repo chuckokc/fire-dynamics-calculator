@@ -1,466 +1,140 @@
-import React, { useState, useEffect } from 'react';
-import * as Chakra from '@chakra-ui/react';
+import { Box, Flex, SimpleGrid, Stack, Text } from '@chakra-ui/react';
+import useCalculatorState from '../../hooks/useCalculatorState';
+import useHistory from '../../hooks/useHistory';
+import { computeFlashover } from '../../lib/calculations';
+import { FLASHOVER_TIME_S, WALL_MATERIALS } from '../../lib/materials';
+import { buildReport } from '../../lib/share';
+import { formatAlternate, formatAuto, unitLabel } from '../../lib/units';
+import CalculatorShell from '../common/CalculatorShell';
+import { Definitions, Formula } from '../common/Equation';
+import HistoryPanel from '../common/HistoryPanel';
+import NumberField from '../common/NumberField';
+import ResultCard from '../common/ResultCard';
+import SelectField from '../common/SelectField';
 
-const FlashoverCalculator = () => {
-  // State declarations
-  const [roomHeight, setRoomHeight] = useState('');
-  const [roomWidth, setRoomWidth] = useState('');
-  const [roomLength, setRoomLength] = useState('');
-  const [openingHeight, setOpeningHeight] = useState('');
-  const [openingWidth, setOpeningWidth] = useState('');
-  const [surfaceMaterial, setSurfaceMaterial] = useState('gypsum');
-  const [units, setUnits] = useState('imperial');
-  const [results, setResults] = useState(null);
-  const [copySuccess, setCopySuccess] = useState(false);
-  // Add these new states for calculation history
-  const [calculationHistory, setCalculationHistory] = useState([]);
-  const [showHistory, setShowHistory] = useState(false);
+const INITIAL_VALUES = { roomLength: '', roomWidth: '', roomHeight: '', ventWidth: '', ventHeight: '', wall: 'gypsum' };
+const FIELD_KINDS = { roomLength: 'length', roomWidth: 'length', roomHeight: 'length', ventWidth: 'length', ventHeight: 'length' };
 
-  // Material thermal properties (k in kW/m/K, ρ in kg/m³, c in kJ/kg/K)
-  // Values from NUREG-1805 / SFPE Handbook. kρc (thermal inertia) is shown
-  // for reference; it is used in the MQH heat-transfer coefficient h_k.
-  const MATERIALS = {
-    gypsum: {
-      name: 'Gypsum Board',
-      k: 0.00017, // ~0.17 W/m·K (SFPE Handbook)
-      ρ: 960,
-      c: 1.1
-      // kρc ≈ 0.18 (kW/m²·K)²·s
-    },
-    concrete: {
-      name: 'Concrete',
-      k: 0.0016, // normal-weight
-      ρ: 2400,
-      c: 0.75
-      // kρc ≈ 2.88
-    },
-    brick: {
-      name: 'Brick',
-      k: 0.0008,
-      ρ: 2600,
-      c: 0.92
-      // kρc ≈ 1.91
-    }
-  };
+const METHODS = [
+  { key: 'mqh', label: 'MQH' },
+  { key: 'thomas', label: 'Thomas' },
+  { key: 'babrauskas', label: 'Babrauskas' },
+];
 
-  // Characteristic time after ignition for h_k calculation (NUREG-1805).
-  // 600 s is a typical pre-flashover duration; in the transient regime
-  // (t < thermal penetration time t_p), h_k = sqrt(kρc / t).
-  const T_CHAR_SEC = 600;
+const ABOUT = (
+  <Stack spacing={3}>
+    <Text>Estimates the minimum heat release rate required for flashover using the MQH, Thomas and Babrauskas correlations.</Text>
+    <Box>
+      <Formula>MQH: Q̇fo = 610 (hk AT AO √HO)^½</Formula>
+      <Formula>Thomas: Q̇fo = 7.8 AT + 378 AO √HO</Formula>
+      <Formula>Babrauskas: Q̇fo = 750 AO √HO</Formula>
+    </Box>
+    <Definitions
+      items={[
+        ['Q̇fo', 'Heat release rate required for flashover (kW)'],
+        ['hk', '√(kρc / t) = wall heat transfer coefficient (kW/m²·K)'],
+        ['kρc', 'Wall thermal inertia (from the material selected)'],
+        ['AT', 'Total surface area of the compartment, 2(LW + LH + WH)'],
+        ['AO', 'Area of the ventilation opening'],
+        ['HO', 'Height of the ventilation opening'],
+      ]}
+    />
+    <Text color="text.muted" fontStyle="italic">
+      Note: hk assumes t = {FLASHOVER_TIME_S} s after ignition (NUREG-1805 transient regime, typical pre-flashover
+      time). Results may differ for very short or very long fire durations.
+    </Text>
+  </Stack>
+);
 
-  // Unit conversion functions
-  const convertLength = (value, toImperial) => {
-    if (!value) return '';
-    const numVal = parseFloat(value);
-    if (toImperial) {
-      return (numVal * 3.28084).toFixed(2); // m to ft
-    }
-    return (numVal * 0.3048).toFixed(2);    // ft to m
-  };
-
-  // Function to save calculation to history
-  const saveToHistory = () => {
-    if (!results) return;
-    
-    const newEntry = {
-      id: Date.now(),
-      timestamp: new Date().toLocaleString(),
-      roomHeight: roomHeight,
-      roomWidth: roomWidth,
-      roomLength: roomLength,
-      openingHeight: openingHeight,
-      openingWidth: openingWidth,
-      surfaceMaterial: surfaceMaterial,
-      units: units,
-      results: {
-        mqh: results.mqh,
-        thomas: results.thomas,
-        babrauskas: results.babrauskas
-      }
-    };
-    
-    // Keep only last 10 calculations
-    setCalculationHistory(prev => [newEntry, ...prev].slice(0, 10));
-  };
-
-  // Function to load calculation from history
-  const loadFromHistory = (entry) => {
-    setRoomHeight(entry.roomHeight);
-    setRoomWidth(entry.roomWidth);
-    setRoomLength(entry.roomLength);
-    setOpeningHeight(entry.openingHeight);
-    setOpeningWidth(entry.openingWidth);
-    setSurfaceMaterial(entry.surfaceMaterial);
-    setUnits(entry.units);
-    setShowHistory(false);
-  };
-
-  const calculateFlashover = () => {
-    if (!roomHeight || !roomWidth || !roomLength || !openingHeight || !openingWidth) return;
-
-    // Convert all dimensions to SI for calculations
-    let H = parseFloat(roomHeight);
-    let W = parseFloat(roomWidth);
-    let L = parseFloat(roomLength);
-    let hw = parseFloat(openingHeight);
-    let ww = parseFloat(openingWidth);
-
-    if (units === 'imperial') {
-      // Convert feet to meters
-      H = H * 0.3048;
-      W = W * 0.3048;
-      L = L * 0.3048;
-      hw = hw * 0.3048;
-      ww = ww * 0.3048;
-    }
-
-    // Calculate room characteristics
-    const AT = 2 * (L * W + L * H + W * H); // Total surface area
-    const AO = hw * ww;                     // Opening area
-    const HO = hw;                          // Opening height
-
-    // Get material properties
-    const material = MATERIALS[surfaceMaterial];
-    // MQH heat-transfer coefficient: h_k = sqrt(kρc / t)  [kW/m²·K]
-    // (NUREG-1805, transient regime t < t_p). Hardcoded t = 600 s.
-    const hk = Math.sqrt((material.k * material.ρ * material.c) / T_CHAR_SEC);
-
-    // Calculate using MQH correlation
-    const QfoMQH = 610 * Math.sqrt(hk * AT * AO * Math.sqrt(HO));
-
-    // Calculate using Thomas correlation
-    const QfoThomas = 7.8 * AT + 378 * AO * Math.sqrt(HO);
-
-    // Calculate using Babrauskas correlation
-    const QfoBabrauskas = 750 * AO * Math.sqrt(HO);
-
-    // Convert results if needed
-    let finalResults = {
-      mqh: QfoMQH,
-      thomas: QfoThomas,
-      babrauskas: QfoBabrauskas
-    };
-
-    if (units === 'imperial') {
-      // Convert kW to BTU/s
-      finalResults = {
-        mqh: QfoMQH * 0.947817,
-        thomas: QfoThomas * 0.947817,
-        babrauskas: QfoBabrauskas * 0.947817
-      };
-    }
-
-    setResults(finalResults);
-  };
-
-  const copyResults = () => {
-  if (!results) return;  // Changed from 'result' to 'results'
-  
-  let copyText = `Fire Dynamics Calculator - Flashover Analysis\n`;
-  copyText += `Date: ${new Date().toLocaleString()}\n\n`;
-  copyText += `Room Parameters:\n`;
-  copyText += `- Dimensions: ${roomLength} × ${roomWidth} × ${roomHeight} ${units === 'SI' ? 'm' : 'ft'}\n`;
-  copyText += `- Opening: ${openingWidth} × ${openingHeight} ${units === 'SI' ? 'm' : 'ft'}\n`;
-  copyText += `- Surface Material: ${MATERIALS[surfaceMaterial].name}\n\n`;
-  copyText += `Results:\n`;
-  copyText += `- MQH Method: ${results.mqh.toFixed(0)} ${units === 'SI' ? 'kW' : 'BTU/s'}\n`;
-  copyText += `- Thomas Method: ${results.thomas.toFixed(0)} ${units === 'SI' ? 'kW' : 'BTU/s'}\n`;
-  copyText += `- Babrauskas Method: ${results.babrauskas.toFixed(0)} ${units === 'SI' ? 'kW' : 'BTU/s'}\n`;
-  
-  navigator.clipboard.writeText(copyText).then(() => {
-    setCopySuccess(true);
-    setTimeout(() => setCopySuccess(false), 2000);
-  });
+const accentFor = (si) => {
+  const average = (si.mqh + si.thomas + si.babrauskas) / 3;
+  if (average > 5000) return 'red.500';
+  if (average > 2000) return 'orange.400';
+  if (average > 1000) return 'yellow.400';
+  return 'green.500';
 };
 
-  useEffect(() => {
-    if (roomHeight && roomWidth && roomLength && openingHeight && openingWidth) {
-      calculateFlashover();
-    }
-  }, [roomHeight, roomWidth, roomLength, openingHeight, openingWidth, surfaceMaterial, units]);
+export default function FlashoverCalculator() {
+  const { values, units, setValue, reset, load } = useCalculatorState('flashover', INITIAL_VALUES, FIELD_KINDS);
+  const history = useHistory('flashover');
+  const result = computeFlashover(values, units);
+  const lengthUnit = unitLabel('length', units);
+  const hrrUnit = unitLabel('hrr', units);
+
+  const field = (name, label) => (
+    <NumberField label={label} unit={lengthUnit} value={values[name]} onChange={(value) => setValue(name, value)} />
+  );
+
+  let report;
+  let save;
+  if (result.status === 'ok') {
+    const room = `${values.roomLength} × ${values.roomWidth} × ${values.roomHeight} ${lengthUnit}`;
+    const opening = `${values.ventWidth} × ${values.ventHeight} ${lengthUnit}`;
+    report = buildReport({
+      title: 'Flashover Analysis',
+      method: 'MQH, Thomas and Babrauskas correlations',
+      results: METHODS.map(
+        ({ key, label }) => `${label}: ${formatAuto(result[key])} ${hrrUnit} (${formatAlternate(result.si[key], 'hrr', units)})`,
+      ),
+      inputs: [`Room (L × W × H): ${room}`, `Opening (W × H): ${opening}`, `Wall material: ${result.wall.name}`],
+      notes: [`h_k assumes t = ${FLASHOVER_TIME_S} s after ignition.`],
+    });
+    save = () =>
+      history.add({
+        units,
+        values,
+        title: METHODS.map(({ key, label }) => `${label} ${formatAuto(result[key])}`).join(' · ') + ` ${hrrUnit}`,
+        detail: `Room ${room} · opening ${opening} · ${result.wall.name}`,
+        accent: accentFor(result.si),
+      });
+  }
 
   return (
-    <Chakra.Box p={{ base: 4, md: 6 }} maxW="2xl" mx="auto">
-      <Chakra.VStack spacing={6} align="stretch">
-        <Chakra.Card variant="outline">
-          <Chakra.CardBody>
-            <Chakra.Text fontSize="lg" fontWeight="bold">Flashover Correlations:</Chakra.Text>
-            <Chakra.Text fontSize="xl" fontFamily="mono">
-              MQH: Q̇fo = 610(hkATAO√HO)^(1/2)
-              <br />
-              Thomas: Q̇fo = 7.8AT + 378AO√HO
-              <br />
-              Babrauskas: Q̇fo = 750AO√HO
-            </Chakra.Text>
-            <Chakra.Text fontSize="sm" color="gray.600" mt={2}>
-              Where:
-              <br />
-              Q̇fo = Heat release rate required for flashover
-              <br />
-              hk = √(kρc/t) = Wall heat transfer coefficient (kW/m²·K)
-              <br />
-              kρc = Wall thermal inertia (from material selection)
-              <br />
-              AT = Total surface area of compartment
-              <br />
-              AO = Area of ventilation opening
-              <br />
-              HO = Height of ventilation opening
-            </Chakra.Text>
-            <Chakra.Text fontSize="sm" color="gray.600" mt={3} fontStyle="italic">
-              Note: h_k assumes t = 600 s after ignition (NUREG-1805 transient regime, typical pre-flashover time). Results may differ for very short or very long fire durations.
-            </Chakra.Text>
-          </Chakra.CardBody>
-        </Chakra.Card>
-        
-        <Chakra.FormControl isRequired>
-          <Chakra.FormLabel>Room Height</Chakra.FormLabel>
-          <Chakra.NumberInput
-            value={roomHeight}
-            onChange={(vs) => setRoomHeight(vs)}
-            min={0}
-          >
-            <Chakra.NumberInputField inputMode="decimal" />
-          </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="gray.600">
-            {units === 'SI' ? 'm' : 'ft'}
-          </Chakra.Text>
-        </Chakra.FormControl>
+    <CalculatorShell
+      title="Flashover"
+      about={ABOUT}
+      onClear={reset}
+      result={
+        <ResultCard title="Heat release rate for flashover" result={result} report={report} reportTitle="Flashover Analysis" onSave={save}>
+          {result.status === 'ok' && (
+            <Stack spacing={1}>
+              {METHODS.map(({ key, label }) => (
+                <Flex key={key} justify="space-between" align="baseline" gap={3}>
+                  <Text color="text.muted">{label}</Text>
+                  <Text fontSize="xl" fontWeight="bold" textAlign="right">
+                    {formatAuto(result[key])}{' '}
+                    <Text as="span" fontSize="md" fontWeight="semibold">
+                      {hrrUnit}
+                    </Text>
+                  </Text>
+                </Flex>
+              ))}
+            </Stack>
+          )}
+        </ResultCard>
+      }
+      extras={<HistoryPanel entries={history.entries} onLoad={load} onClear={history.clear} />}
+    >
+      <Text fontWeight="semibold">Room</Text>
+      <SimpleGrid columns={2} spacing={3}>
+        {field('roomLength', 'Length')}
+        {field('roomWidth', 'Width')}
+        {field('roomHeight', 'Height')}
+      </SimpleGrid>
 
-        <Chakra.FormControl isRequired>
-          <Chakra.FormLabel>Room Width</Chakra.FormLabel>
-          <Chakra.NumberInput
-            value={roomWidth}
-            onChange={(vs) => setRoomWidth(vs)}
-            min={0}
-          >
-            <Chakra.NumberInputField inputMode="decimal" />
-          </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="gray.600">
-            {units === 'SI' ? 'm' : 'ft'}
-          </Chakra.Text>
-        </Chakra.FormControl>
+      <Text fontWeight="semibold">Ventilation opening (door or window)</Text>
+      <SimpleGrid columns={2} spacing={3}>
+        {field('ventWidth', 'Width')}
+        {field('ventHeight', 'Height')}
+      </SimpleGrid>
 
-        <Chakra.FormControl isRequired>
-          <Chakra.FormLabel>Room Length</Chakra.FormLabel>
-          <Chakra.NumberInput
-            value={roomLength}
-            onChange={(vs) => setRoomLength(vs)}
-            min={0}
-          >
-            <Chakra.NumberInputField inputMode="decimal" />
-          </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="gray.600">
-            {units === 'SI' ? 'm' : 'ft'}
-          </Chakra.Text>
-        </Chakra.FormControl>
-
-        <Chakra.FormControl isRequired>
-          <Chakra.FormLabel>Opening Height</Chakra.FormLabel>
-          <Chakra.NumberInput
-            value={openingHeight}
-            onChange={(vs) => setOpeningHeight(vs)}
-            min={0}
-          >
-            <Chakra.NumberInputField inputMode="decimal" />
-          </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="gray.600">
-            {units === 'SI' ? 'm' : 'ft'}
-          </Chakra.Text>
-        </Chakra.FormControl>
-
-        <Chakra.FormControl isRequired>
-          <Chakra.FormLabel>Opening Width</Chakra.FormLabel>
-          <Chakra.NumberInput
-            value={openingWidth}
-            onChange={(vs) => setOpeningWidth(vs)}
-            min={0}
-          >
-            <Chakra.NumberInputField inputMode="decimal" />
-          </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="gray.600">
-            {units === 'SI' ? 'm' : 'ft'}
-          </Chakra.Text>
-        </Chakra.FormControl>
-
-        <Chakra.FormControl>
-          <Chakra.FormLabel>Surface Material</Chakra.FormLabel>
-          <Chakra.Select
-            value={surfaceMaterial}
-            onChange={(e) => setSurfaceMaterial(e.target.value)}
-          >
-            {Object.entries(MATERIALS).map(([key, { name }]) => (
-              <option key={key} value={key}>{name}</option>
-            ))}
-          </Chakra.Select>
-        </Chakra.FormControl>
-
-        <Chakra.FormControl>
-          <Chakra.FormLabel>Units</Chakra.FormLabel>
-          <Chakra.VStack align="start" spacing={2}>
-            <Chakra.RadioGroup 
-              value={units} 
-              onChange={(newUnits) => setUnits(newUnits)}
-            >
-              <Chakra.HStack spacing={4}>
-                <Chakra.Radio value="SI">SI (m, kW)</Chakra.Radio>
-                <Chakra.Radio value="imperial">Imperial (ft, BTU/s)</Chakra.Radio>
-              </Chakra.HStack>
-            </Chakra.RadioGroup>
-            
-            <Chakra.Button 
-              size="sm" 
-              colorScheme="blue" 
-              onClick={() => {
-                const newUnits = units === 'SI' ? 'imperial' : 'SI';
-                setRoomHeight(prev => convertLength(prev, units === 'SI'));
-                setRoomWidth(prev => convertLength(prev, units === 'SI'));
-                setRoomLength(prev => convertLength(prev, units === 'SI'));
-                setOpeningHeight(prev => convertLength(prev, units === 'SI'));
-                setOpeningWidth(prev => convertLength(prev, units === 'SI'));
-                setUnits(newUnits);
-              }}
-            >
-              Convert Current Measurements to {units === 'SI' ? 'Imperial' : 'SI'} Units
-            </Chakra.Button>
-          </Chakra.VStack>
-        </Chakra.FormControl>
-
-        {/* Add history toggle button */}
-        {calculationHistory.length > 0 && (
-          <Chakra.Button
-            variant="outline"
-            onClick={() => setShowHistory(!showHistory)}
-          >
-            {showHistory ? 'Hide' : 'Show'} History ({calculationHistory.length})
-          </Chakra.Button>
-        )}
-
-        {/* History display */}
-        {showHistory && calculationHistory.length > 0 && (
-          <Chakra.Card variant="outline">
-            <Chakra.CardBody>
-              <Chakra.HStack justify="space-between" mb={3}>
-                <Chakra.Text fontWeight="bold">Calculation History</Chakra.Text>
-                <Chakra.Button
-                  size="sm"
-                  colorScheme="red"
-                  variant="ghost"
-                  onClick={() => {
-                    setCalculationHistory([]);
-                    setShowHistory(false);
-                  }}
-                >
-                  Clear All
-                </Chakra.Button>
-              </Chakra.HStack>
-              <Chakra.VStack align="stretch" spacing={2}>
-                {calculationHistory.map((entry) => {
-                  // Get the average of the three methods for coloring
-                  const avgHRR = units === 'SI' 
-                    ? (entry.results.mqh + entry.results.thomas + entry.results.babrauskas) / 3
-                    : ((entry.results.mqh + entry.results.thomas + entry.results.babrauskas) / 3) * 1.055056;
-                  
-                  const hrrColor = avgHRR > 5000 ? 'red' : 
-                                  avgHRR > 2000 ? 'orange' :
-                                  avgHRR > 1000 ? 'yellow' : 'green';
-                  
-                  return (
-                    <Chakra.Box
-                      key={entry.id}
-                      p={3}
-                      borderWidth="1px"
-                      borderRadius="md"
-                      borderLeftWidth="4px"
-                      borderLeftColor={`${hrrColor}.500`}
-                      _hover={{ bg: Chakra.useColorModeValue('gray.50', 'gray.700') }}
-                      cursor="pointer"
-                      onClick={() => loadFromHistory(entry)}
-                    >
-                      <Chakra.HStack justify="space-between">
-                        <Chakra.VStack align="start" spacing={0}>
-                          <Chakra.Text fontSize="sm" fontWeight="medium">
-                            Room: {entry.roomLength}×{entry.roomWidth}×{entry.roomHeight} {entry.units === 'SI' ? 'm' : 'ft'}
-                          </Chakra.Text>
-                          <Chakra.Text fontSize="xs" color="gray.600">
-                            {entry.timestamp}
-                          </Chakra.Text>
-                          <Chakra.Text fontSize="xs" color="gray.500">
-                            Opening: {entry.openingWidth}×{entry.openingHeight} {entry.units === 'SI' ? 'm' : 'ft'}
-                          </Chakra.Text>
-                          <Chakra.Text fontSize="xs" color="gray.500">
-                            {MATERIALS[entry.surfaceMaterial].name}
-                          </Chakra.Text>
-                        </Chakra.VStack>
-                        <Chakra.VStack align="end" spacing={0}>
-                          <Chakra.Text fontSize="xs" fontWeight="bold">
-                            MQH: {entry.results.mqh.toFixed(0)}
-                          </Chakra.Text>
-                          <Chakra.Text fontSize="xs" fontWeight="bold">
-                            Thomas: {entry.results.thomas.toFixed(0)}
-                          </Chakra.Text>
-                          <Chakra.Text fontSize="xs" fontWeight="bold">
-                            Babrauskas: {entry.results.babrauskas.toFixed(0)}
-                          </Chakra.Text>
-                          <Chakra.Text fontSize="xs" color="gray.600">
-                            {entry.units === 'SI' ? 'kW' : 'BTU/s'}
-                          </Chakra.Text>
-                        </Chakra.VStack>
-                      </Chakra.HStack>
-                    </Chakra.Box>
-                  );
-                })}
-              </Chakra.VStack>
-            </Chakra.CardBody>
-          </Chakra.Card>
-        )}
-
-        <Chakra.Button
-          colorScheme="blue"
-          onClick={calculateFlashover}
-          isDisabled={!roomHeight || !roomWidth || !roomLength || !openingHeight || !openingWidth}
-        >
-          Calculate Flashover Conditions
-        </Chakra.Button>
-
-        {results && (
-  <Chakra.Alert status="info">
-    <Chakra.AlertIcon />
-    <Chakra.Box flex="1">
-      <Chakra.VStack align="start" spacing={2} width="100%">
-        <Chakra.Text fontWeight="bold">Required Heat Release Rate for Flashover:</Chakra.Text>
-        <Chakra.Text>
-          MQH Correlation: {results.mqh.toFixed(0)} {units === 'SI' ? 'kW' : 'BTU/s'}
-        </Chakra.Text>
-        <Chakra.Text>
-          Thomas Correlation: {results.thomas.toFixed(0)} {units === 'SI' ? 'kW' : 'BTU/s'}
-        </Chakra.Text>
-        <Chakra.Text>
-          Babrauskas Correlation: {results.babrauskas.toFixed(0)} {units === 'SI' ? 'kW' : 'BTU/s'}
-        </Chakra.Text>
-      </Chakra.VStack>
-    </Chakra.Box>
-    <Chakra.VStack>
-      <Chakra.Button
-        size="sm"
-        colorScheme={copySuccess ? "green" : "blue"}
-        onClick={copyResults}
-      >
-        {copySuccess ? "Copied!" : "Copy Results"}
-      </Chakra.Button>
-      <Chakra.Button
-        size="sm"
-        colorScheme="purple"
-        onClick={saveToHistory}
-      >
-        Save to History
-      </Chakra.Button>
-    </Chakra.VStack>
-  </Chakra.Alert>
-)}
-      </Chakra.VStack>
-    </Chakra.Box>
+      <SelectField label="Wall and ceiling material" value={values.wall} onChange={(wall) => setValue('wall', wall)}>
+        {Object.entries(WALL_MATERIALS).map(([key, material]) => (
+          <option key={key} value={key}>
+            {material.name}
+          </option>
+        ))}
+      </SelectField>
+    </CalculatorShell>
   );
-};
-
-export default FlashoverCalculator;
+}

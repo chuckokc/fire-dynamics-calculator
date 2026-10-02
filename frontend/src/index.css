@@ -2,6 +2,30 @@
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
+  /* Height of the phone bottom navigation; sticky results sit above it. */
+  --fdc-nav-h: calc(60px + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 48em) {
+  :root {
+    --fdc-nav-h: 0px;
+  }
+}
+
+/* While a number is being typed the keyboard covers the bottom of the
+   screen, so hide the bottom navigation and let the result sit at the edge. */
+:root:has(input[inputmode='decimal']:focus) {
+  --fdc-nav-h: 0px;
+}
+
+:root:has(input[inputmode='decimal']:focus) .fdc-bottom-nav {
+  display: none !important;
+}
+
+/* Keep a focused input clear of the pinned result card when the browser
+   scrolls it into view. */
+html {
+  scroll-padding-bottom: calc(var(--fdc-nav-h) + 12rem);
 }
 
 body {
