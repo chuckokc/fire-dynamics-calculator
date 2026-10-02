@@ -1,8 +1,16 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+// package.json is the single source of the app version (shown in the footer
+// and written to the web app manifest).
+const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+  },
   plugins: [
     react(),
     VitePWA({
@@ -17,7 +25,7 @@ export default defineConfig({
         display: 'standalone',
         scope: '/',
         start_url: '/',
-        version: '1.3.0',  // Updated from 1.2.3 - MQH fix + mobile improvements
+        version,
         icons: [
           {
             src: '/icons/icon-192x192.png',
@@ -78,14 +86,20 @@ export default defineConfig({
     })
   ],
   base: '/',
+  test: {
+    include: ['src/**/*.test.js'],
+    environment: 'node',
+  },
   build: {
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor': ['react', 'react-dom'],
-          'ui': ['@chakra-ui/react', '@emotion/react', '@emotion/styled']
-        }
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'vendor';
+          if (/node_modules\/(@chakra-ui|@emotion|framer-motion)\//.test(id)) return 'ui';
+          return undefined;
+        },
       }
     }
   }
