@@ -33,7 +33,7 @@ browser's local storage, so they survive switching calculators and reopening the
 
 ## Development
 
-Requires Node.js 20 or newer.
+Requires Node.js 20 or newer. `frontend/.nvmrc` pins Node 22, which Netlify uses for builds.
 
 ```sh
 cd frontend
