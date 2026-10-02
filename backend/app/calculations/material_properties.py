@@ -1,172 +1,103 @@
+# backend/app/calculations/material_properties.py
+
+import math
+
 class MaterialProperties:
     """
-    Provides standardized material properties from NUREG-1805 for use in fire dynamics calculations.
-    Supports core calculations by providing verified material data.
+    Provides thermal and fuel properties for materials used in fire dynamics calculations.
     """
-    
-   # Heat of combustion values (kJ/g or MJ/kg)
-    HEAT_OF_COMBUSTION = {
-        # Gases
-        'methane': 50.0,
-        'ethane': 47.5,
-        'ethene': 50.4,
-        'propane': 46.5,
-        'carbon_monoxide': 10.1,
-        # Liquids
-        'n-butane': 45.7,
-        'n-hexane': 43.8,
-        'heptane': 44.6,
-        'gasoline': 43.7,
-        'kerosene': 43.2,
-        'benzene': 40.0,
-        'acetone': 30.8,
-        'ethanol': 26.8,
-        'methanol': 19.8,
-        # Ordinary polymers
-        'hdpe': 40.0,  # High-density polyethylene
-        'polyethylene': 43.4,
-        'polypropylene': 44.0,
-        'polystyrene': 35.8,
-        'nylon': 27.9,
-        'nylon_6': 28.8,
-        'pmma': 24.2,  # Polymethyl methacrylate
-        'pbt': 20.9,   # Polybutylene terephthalate
-        'abs': 30.0,   # Acrylonitrile-butadiene-styrene
-        'abs_fr': 11.7,
-        'polyurethane_foam': 22.3,  # Average value from range 18.4-26.3
-        'pvc': 10.0,   # Average value from range 9-11
-        # Woods
-        'douglas_fir': 14.7,
-        'hemlock': 13.3,
-        'plywood': 11.9,
-        'plywood_fr': 11.2
+
+    # --- NEW: Centralized dictionary for all fuel properties ---
+    FUELS = {
+        'liquefied_propane': {'name': 'Liquefied Propane', 'heat_of_combustion': 46.5, 'mass_flux': 115.0},
+        'liquefied_natural_gas': {'name': 'Liquefied Natural Gas (LNG)', 'heat_of_combustion': 50.0, 'mass_flux': 90.0},
+        'benzene': {'name': 'Benzene', 'heat_of_combustion': 40.0, 'mass_flux': 90.0},
+        'butane': {'name': 'Butane', 'heat_of_combustion': 45.7, 'mass_flux': 80.0},
+        'n-butane': {'name': 'n-Butane', 'heat_of_combustion': 45.7, 'mass_flux': None},
+        'hexane': {'name': 'Hexane', 'heat_of_combustion': 43.8, 'mass_flux': 75.0},
+        'n-hexane': {'name': 'n-Hexane', 'heat_of_combustion': 43.8, 'mass_flux': None},
+        'xylene': {'name': 'Xylene', 'heat_of_combustion': 40.0, 'mass_flux': 70.0},
+        'jp-4': {'name': 'JP-4', 'heat_of_combustion': 43.2, 'mass_flux': 60.0},
+        'heptane': {'name': 'Heptane', 'heat_of_combustion': 44.6, 'mass_flux': 70.0},
+        'gasoline': {'name': 'Gasoline', 'heat_of_combustion': 43.7, 'mass_flux': 55.0},
+        'acetone': {'name': 'Acetone', 'heat_of_combustion': 30.8, 'mass_flux': 40.0},
+        'methanol': {'name': 'Methanol', 'heat_of_combustion': 19.8, 'mass_flux': 22.0},
+        'kerosene': {'name': 'Kerosene', 'heat_of_combustion': 43.2, 'mass_flux': None},
+        'ethanol': {'name': 'Ethanol', 'heat_of_combustion': 26.8, 'mass_flux': None},
+        
+        'hdpe': {'name': 'HDPE', 'heat_of_combustion': 40.0, 'mass_flux': None},
+        'polyethylene': {'name': 'Polyethylene', 'heat_of_combustion': 43.4, 'mass_flux': None},
+        'polypropylene': {'name': 'Polypropylene', 'heat_of_combustion': 44.0, 'mass_flux': None},
+        'polystyrene': {'name': 'Polystyrene', 'heat_of_combustion': 35.8, 'mass_flux': None},
+        'polystyrene_granular': {'name': 'Polystyrene (Granular)', 'heat_of_combustion': 35.8, 'mass_flux': 38.0},
+        'pmma': {'name': 'PMMA', 'heat_of_combustion': 24.2, 'mass_flux': None},
+        'pmma_granular': {'name': 'PMMA (Granular)', 'heat_of_combustion': 24.2, 'mass_flux': 28.0},
+        'polyethylene_granular': {'name': 'Polyethylene (Granular)', 'heat_of_combustion': 43.4, 'mass_flux': 26.0},
+        'polypropylene_granular': {'name': 'Polypropylene (Granular)', 'heat_of_combustion': 44.0, 'mass_flux': 24.0},
+        'nylon': {'name': 'Nylon', 'heat_of_combustion': 27.9, 'mass_flux': None},
+        'nylon_6': {'name': 'Nylon 6', 'heat_of_combustion': 28.8, 'mass_flux': None},
+        'pbt': {'name': 'PBT', 'heat_of_combustion': 20.9, 'mass_flux': None},
+        'abs': {'name': 'ABS', 'heat_of_combustion': 30.0, 'mass_flux': None},
+        'abs_fr': {'name': 'ABS-FR', 'heat_of_combustion': 11.7, 'mass_flux': None},
+        'rigid_polyurethane_foam': {'name': 'Rigid Polyurethane Foam', 'heat_of_combustion': 22.3, 'mass_flux': 23.5},
+        'flexible_polyurethane_foam': {'name': 'Flexible Polyurethane Foam', 'heat_of_combustion': 22.3, 'mass_flux': 24.0},
+        'pvc': {'name': 'PVC', 'heat_of_combustion': 10.0, 'mass_flux': None},
+        'pvc_granular': {'name': 'PVC (Granular)', 'heat_of_combustion': 10.0, 'mass_flux': 16.0},
+        
+        'corrugated_paper': {'name': 'Corrugated Paper', 'heat_of_combustion': 13.2, 'mass_flux': 14.0},
+        'wood_crib': {'name': 'Wood Crib', 'heat_of_combustion': 14.7, 'mass_flux': 11.0},
+        'douglas_fir': {'name': 'Douglas Fir', 'heat_of_combustion': 14.7, 'mass_flux': None},
+        'hemlock': {'name': 'Hemlock', 'heat_of_combustion': 13.3, 'mass_flux': None},
+        'plywood': {'name': 'Plywood', 'heat_of_combustion': 11.9, 'mass_flux': None},
+        'plywood_fr': {'name': 'Plywood FR', 'heat_of_combustion': 11.2, 'mass_flux': None},
     }
 
-    # Mass burning flux (g/m²-s)
-    MASS_BURNING_FLUX = {
-        'liquefied_propane': 115.0,  # Average of 100-130
-        'liquefied_natural_gas': 90.0,  # Average of 80-100
-        'benzene': 90.0,
-        'butane': 80.0,
-        'hexane': 75.0,  # Average of 70-80
-        'xylene': 70.0,
-        'jp-4': 60.0,  # Average of 50-70
-        'heptane': 70.0,  # Average of 65-75
-        'gasoline': 55.0,  # Average of 50-60
-        'acetone': 40.0,
-        'methanol': 22.0,
-        'polystyrene_granular': 38.0,
-        'pmma_granular': 28.0,
-        'polyethylene_granular': 26.0,
-        'polypropylene_granular': 24.0,
-        'rigid_polyurethane_foam': 23.5,  # Average of 22-25
-        'flexible_polyurethane_foam': 24.0,  # Average of 21-27
-        'pvc_granular': 16.0,
-        'corrugated_paper': 14.0,
-        'wood_crib': 11.0
-    }
-    
-    # Thermal properties for common wall/ceiling materials
+    # This dictionary is for construction materials, not fuels
     THERMAL_PROPERTIES = {
         'gypsum_board': {
-            'conductivity': 0.0016,  # kW/m/K
-            'density': 790,          # kg/m³
-            'specific_heat': 1.09    # kJ/kg/K
+            'name': 'Gypsum Board',
+            'conductivity': 0.16, # W/m-K
+            'density': 790,      # kg/m³
+            'specific_heat': 1.09 # kJ/kg-K
         },
         'concrete': {
-            'conductivity': 0.0016,  # kW/m/K
-            'density': 2300,         # kg/m³
-            'specific_heat': 0.92    # kJ/kg/K
+            'name': 'Concrete',
+            'conductivity': 1.6,
+            'density': 2300,
+            'specific_heat': 0.92
         },
         'brick': {
-            'conductivity': 0.0008,  # kW/m/K
-            'density': 1600,         # kg/m³
-            'specific_heat': 0.84    # kJ/kg/K
+            'name': 'Brick',
+            'conductivity': 0.8,
+            'density': 1600,
+            'specific_heat': 0.84
         }
     }
-    
-    # Ignition temperatures (°C)
-    IGNITION_TEMPERATURE = {
-        'wood': 350,
-        'paper': 230,
-        'polyethylene': 340,
-        'polyurethane_foam': 310,
-        'gasoline': 280,
-        'kerosene': 210
-    }
+
+    # --- UPDATED Helper Methods to use the new FUELS dictionary ---
+
+    @staticmethod
+    def get_heat_of_combustion(material_key: str, units: str = 'SI') -> float:
+        if material_key not in MaterialProperties.FUELS:
+            raise ValueError(f"Material '{material_key}' not found in database")
+        return MaterialProperties.FUELS[material_key]['heat_of_combustion']
+
+    @staticmethod
+    def get_mass_burning_flux(material_key: str, units: str = 'SI') -> float:
+        if material_key not in MaterialProperties.FUELS:
+            raise ValueError(f"Material '{material_key}' not found in database")
+        
+        mass_flux = MaterialProperties.FUELS[material_key].get('mass_flux')
+        if mass_flux is None:
+            raise ValueError(f"Mass flux not available for material: {material_key}")
+        return mass_flux
+
+    @staticmethod
+    def get_thermal_properties(material_key: str) -> dict:
+        if material_key not in MaterialProperties.THERMAL_PROPERTIES:
+            raise ValueError(f"Material '{material_key}' not found in database")
+        return MaterialProperties.THERMAL_PROPERTIES[material_key]
     
     @staticmethod
-    def get_heat_of_combustion(material: str, units: str = 'SI') -> float:
-        """
-        Get heat of combustion for a material.
-        
-        Args:
-            material: Name of material (lowercase)
-            units: 'SI' for MJ/kg, 'imperial' for BTU/lb
-            
-        Returns:
-            Heat of combustion in specified units
-        """
-        try:
-            hoc = MaterialProperties.HEAT_OF_COMBUSTION[material.lower()]
-            if units.lower() == 'imperial':
-                return hoc * 430.0  # Convert MJ/kg to BTU/lb
-            return hoc
-        except KeyError:
-            raise ValueError(f"Material '{material}' not found in database")
-    
-    @staticmethod
-    def get_mass_burning_flux(material: str, units: str = 'SI') -> float:
-        """
-        Get mass burning flux for a material.
-        
-        Args:
-            material: Name of material (lowercase)
-            units: 'SI' for kg/m²-s, 'imperial' for lb/ft²-s
-            
-        Returns:
-            Mass burning flux in specified units
-        """
-        try:
-            flux = MaterialProperties.MASS_BURNING_FLUX[material.lower()]
-            if units.lower() == 'imperial':
-                return flux * 0.204816  # Convert kg/m²-s to lb/ft²-s
-            return flux
-        except KeyError:
-            raise ValueError(f"Material '{material}' not found in database")
-    
-    @staticmethod
-    def get_thermal_properties(material: str) -> dict:
-        """
-        Get thermal properties for a material.
-        
-        Args:
-            material: Name of material (lowercase)
-            
-        Returns:
-            Dictionary of thermal properties
-        """
-        try:
-            return MaterialProperties.THERMAL_PROPERTIES[material.lower()]
-        except KeyError:
-            raise ValueError(f"Material '{material}' not found in database")
-    
-    @staticmethod
-    def get_ignition_temperature(material: str, units: str = 'SI') -> float:
-        """
-        Get ignition temperature for a material.
-        
-        Args:
-            material: Name of material (lowercase)
-            units: 'SI' for °C, 'imperial' for °F
-            
-        Returns:
-            Ignition temperature in specified units
-        """
-        try:
-            temp = MaterialProperties.IGNITION_TEMPERATURE[material.lower()]
-            if units.lower() == 'imperial':
-                return (temp * 9/5) + 32  # Convert °C to °F
-            return temp
-        except KeyError:
-            raise ValueError(f"Material '{material}' not found in database")
+    def get_all_fuels() -> dict:
+        return MaterialProperties.FUELS

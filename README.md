@@ -26,8 +26,10 @@ browser's local storage, so they survive switching calculators and reopening the
   - `src/lib/`: the fire dynamics math (`fireMath.js`), unit handling (`units.js`),
     reference data (`materials.js`) and per-calculator logic (`calculations.js`), with unit tests.
   - `src/components/`: the calculator screens and shared UI.
-- `backend/`: an earlier Python implementation of the calculations with its own tests.
-  The deployed app does not use it.
+- `backend/`: a Python/Flask API (`api.py`) with the same calculations, from an earlier
+  version that sent calculations to a server. The deployed app does all calculations on the
+  device and does not use it. To run it: `cd backend`, `pip install -r requirements.txt`,
+  then `gunicorn api:app`.
 
 ## Development
 
