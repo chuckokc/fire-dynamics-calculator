@@ -39,8 +39,10 @@ app's files are served, and the code is not in this repo or in the app.
   (production and deploy previews). Do not tick "Contains secret values":
   Netlify's secret scanner fails the build if a short code word appears
   anywhere in the app or the docs. Codes are not case-sensitive.
-- **To change the code**, edit `ACCESS_CODE` in Netlify. No redeploy is
-  needed. Everyone is signed out. Phones and computers that have the app
+- **To change the code**, edit `ACCESS_CODE` in Netlify, then trigger a new
+  deploy (Deploys > Trigger deploy > Deploy site). Netlify reads the value
+  when it builds, so the old code keeps working until that deploy finishes.
+  After that everyone is signed out. Phones and computers that have the app
   installed are cleared and asked for the new code the next time they are
   online and open it. A device that stays offline keeps its cached copy until
   it next connects.
