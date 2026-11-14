@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
+import { MATERIALS, flashoverHRR } from '../../calculations/flashover.js';
+import { DEFAULT_UNITS, convertInput } from '../../calculations/units.js';
 
 const FlashoverCalculator = () => {
   // State declarations
@@ -9,59 +11,15 @@ const FlashoverCalculator = () => {
   const [openingHeight, setOpeningHeight] = useState('');
   const [openingWidth, setOpeningWidth] = useState('');
   const [surfaceMaterial, setSurfaceMaterial] = useState('gypsum');
-  const [units, setUnits] = useState('imperial');
+  const [units, setUnits] = useState(DEFAULT_UNITS);
   const [results, setResults] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
   // Add these new states for calculation history
   const [calculationHistory, setCalculationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
 
-  // Material thermal properties (k in kW/m/K, ρ in kg/m³, c in kJ/kg/K)
-  // Values from NUREG-1805 (Klote & Milke, Principles of Smoke Management,
-  // 2002, p. 270), the same table the NUREG flashover and temperature
-  // spreadsheets use. kρc (thermal inertia) is used in h_k below.
-  const MATERIALS = {
-    gypsum: {
-      name: 'Gypsum Board',
-      k: 0.00017,
-      ρ: 960,
-      c: 1.1
-      // kρc ≈ 0.18 (kW/m²·K)²·s
-    },
-    concrete: {
-      name: 'Concrete',
-      k: 0.0016,
-      ρ: 2400,
-      c: 0.75
-      // kρc ≈ 2.9
-    },
-    brick: {
-      name: 'Brick',
-      k: 0.0008,
-      ρ: 2600,
-      c: 0.8
-      // kρc ≈ 1.7
-    }
-    // Steel left out on purpose: thin steel heats through in under a
-    // second, so the 600 s h_k assumption below doesn't apply to it.
-  };
-
-  // Characteristic time after ignition for h_k. This is a simplification
-  // chosen for this calculator, NOT the NUREG method: h_k = sqrt(kρc / t)
-  // with t = 600 s, so students don't need the wall thickness. NUREG's
-  // flashover spreadsheet instead uses h_k = k/δ (walls heated all the way
-  // through, t > t_p), which needs the lining thickness δ.
-  const T_CHAR_SEC = 600;
-
-  // Unit conversion functions
-  const convertLength = (value, toImperial) => {
-    if (!value) return '';
-    const numVal = parseFloat(value);
-    if (toImperial) {
-      return (numVal * 3.28084).toFixed(2); // m to ft
-    }
-    return (numVal * 0.3048).toFixed(2);    // ft to m
-  };
+  // Materials, h_k (t = 600 s) and the flashover equations are in
+  // src/calculations/flashover.js, where tests check them against NUREG.
 
   // Function to save calculation to history
   const saveToHistory = () => {
@@ -101,63 +59,28 @@ const FlashoverCalculator = () => {
   };
 
   const calculateFlashover = () => {
-    if (!roomHeight || !roomWidth || !roomLength || !openingHeight || !openingWidth) return;
+    const r = flashoverHRR({
+      H: parseFloat(roomHeight),
+      W: parseFloat(roomWidth),
+      L: parseFloat(roomLength),
+      hv: parseFloat(openingHeight),
+      wv: parseFloat(openingWidth),
+      material: surfaceMaterial,
+      units
+    });
+    setResults(r ? { mqh: r.mqh, thomas: r.thomas, babrauskas: r.babrauskas, kW: r.kW } : null);
+  };
 
-    // Convert all dimensions to SI for calculations
-    let H = parseFloat(roomHeight);
-    let W = parseFloat(roomWidth);
-    let L = parseFloat(roomLength);
-    let hw = parseFloat(openingHeight);
-    let ww = parseFloat(openingWidth);
-
-    if (units === 'imperial') {
-      // Convert feet to meters
-      H = H * 0.3048;
-      W = W * 0.3048;
-      L = L * 0.3048;
-      hw = hw * 0.3048;
-      ww = ww * 0.3048;
-    }
-
-    // Calculate room characteristics
-    const AO = hw * ww;                         // Opening area
-    const HO = hw;                              // Opening height
-    // Total area of the enclosing surfaces, excluding the vent opening
-    // (NUREG-1805 Chapter 13 definition of A_T)
-    const AT = 2 * (L * W + L * H + W * H) - AO;
-
-    // Get material properties
-    const material = MATERIALS[surfaceMaterial];
-    // MQH heat-transfer coefficient: h_k = sqrt(kρc / t)  [kW/m²·K]
-    // with t = 600 s (see T_CHAR_SEC above).
-    const hk = Math.sqrt((material.k * material.ρ * material.c) / T_CHAR_SEC);
-
-    // Calculate using MQH correlation
-    const QfoMQH = 610 * Math.sqrt(hk * AT * AO * Math.sqrt(HO));
-
-    // Calculate using Thomas correlation
-    const QfoThomas = 7.8 * AT + 378 * AO * Math.sqrt(HO);
-
-    // Calculate using Babrauskas correlation
-    const QfoBabrauskas = 750 * AO * Math.sqrt(HO);
-
-    // Convert results if needed
-    let finalResults = {
-      mqh: QfoMQH,
-      thomas: QfoThomas,
-      babrauskas: QfoBabrauskas
-    };
-
-    if (units === 'imperial') {
-      // Convert kW to BTU/s
-      finalResults = {
-        mqh: QfoMQH * 0.947817,
-        thomas: QfoThomas * 0.947817,
-        babrauskas: QfoBabrauskas * 0.947817
-      };
-    }
-
-    setResults(finalResults);
+  // Switching units converts what's already entered
+  const handleUnitsChange = (newUnits) => {
+    if (newUnits === units) return;
+    const toImperial = newUnits === 'imperial';
+    setRoomHeight(prev => convertInput(prev, 'length', toImperial));
+    setRoomWidth(prev => convertInput(prev, 'length', toImperial));
+    setRoomLength(prev => convertInput(prev, 'length', toImperial));
+    setOpeningHeight(prev => convertInput(prev, 'length', toImperial));
+    setOpeningWidth(prev => convertInput(prev, 'length', toImperial));
+    setUnits(newUnits);
   };
 
   const copyResults = () => {
@@ -170,9 +93,9 @@ const FlashoverCalculator = () => {
   copyText += `- Opening: ${openingWidth} × ${openingHeight} ${units === 'SI' ? 'm' : 'ft'}\n`;
   copyText += `- Surface Material: ${MATERIALS[surfaceMaterial].name}\n\n`;
   copyText += `Results:\n`;
-  copyText += `- MQH Method: ${results.mqh.toFixed(0)} ${units === 'SI' ? 'kW' : 'BTU/s'}\n`;
-  copyText += `- Thomas Method: ${results.thomas.toFixed(0)} ${units === 'SI' ? 'kW' : 'BTU/s'}\n`;
-  copyText += `- Babrauskas Method: ${results.babrauskas.toFixed(0)} ${units === 'SI' ? 'kW' : 'BTU/s'}\n`;
+  copyText += `- MQH Method: ${results.mqh.toFixed(0)} ${units === 'SI' ? 'kW' : `BTU/s (${results.kW.mqh.toFixed(0)} kW)`}\n`;
+  copyText += `- Thomas Method: ${results.thomas.toFixed(0)} ${units === 'SI' ? 'kW' : `BTU/s (${results.kW.thomas.toFixed(0)} kW)`}\n`;
+  copyText += `- Babrauskas Method: ${results.babrauskas.toFixed(0)} ${units === 'SI' ? 'kW' : `BTU/s (${results.kW.babrauskas.toFixed(0)} kW)`}\n`;
   
   navigator.clipboard.writeText(copyText).then(() => {
     setCopySuccess(true);
@@ -307,7 +230,7 @@ const FlashoverCalculator = () => {
           <Chakra.VStack align="start" spacing={2}>
             <Chakra.RadioGroup 
               value={units} 
-              onChange={(newUnits) => setUnits(newUnits)}
+              onChange={handleUnitsChange}
             >
               <Chakra.HStack spacing={4}>
                 <Chakra.Radio value="SI">SI (m, kW)</Chakra.Radio>
@@ -315,21 +238,9 @@ const FlashoverCalculator = () => {
               </Chakra.HStack>
             </Chakra.RadioGroup>
             
-            <Chakra.Button 
-              size="sm" 
-              colorScheme="blue" 
-              onClick={() => {
-                const newUnits = units === 'SI' ? 'imperial' : 'SI';
-                setRoomHeight(prev => convertLength(prev, units === 'SI'));
-                setRoomWidth(prev => convertLength(prev, units === 'SI'));
-                setRoomLength(prev => convertLength(prev, units === 'SI'));
-                setOpeningHeight(prev => convertLength(prev, units === 'SI'));
-                setOpeningWidth(prev => convertLength(prev, units === 'SI'));
-                setUnits(newUnits);
-              }}
-            >
-              Convert Current Measurements to {units === 'SI' ? 'Imperial' : 'SI'} Units
-            </Chakra.Button>
+            <Chakra.Text fontSize="xs" color="gray.500">
+              Switching units converts the values already entered.
+            </Chakra.Text>
           </Chakra.VStack>
         </Chakra.FormControl>
 
@@ -364,7 +275,7 @@ const FlashoverCalculator = () => {
               <Chakra.VStack align="stretch" spacing={2}>
                 {calculationHistory.map((entry) => {
                   // Get the average of the three methods for coloring
-                  const avgHRR = units === 'SI' 
+                  const avgHRR = entry.units === 'SI' 
                     ? (entry.results.mqh + entry.results.thomas + entry.results.babrauskas) / 3
                     : ((entry.results.mqh + entry.results.thomas + entry.results.babrauskas) / 3) * 1.055056;
                   
@@ -437,13 +348,13 @@ const FlashoverCalculator = () => {
       <Chakra.VStack align="start" spacing={2} width="100%">
         <Chakra.Text fontWeight="bold">Required Heat Release Rate for Flashover:</Chakra.Text>
         <Chakra.Text>
-          MQH Correlation: {results.mqh.toFixed(0)} {units === 'SI' ? 'kW' : 'BTU/s'}
+          MQH Correlation: {results.mqh.toFixed(0)} {units === 'SI' ? 'kW' : `BTU/s (${results.kW.mqh.toFixed(0)} kW)`}
         </Chakra.Text>
         <Chakra.Text>
-          Thomas Correlation: {results.thomas.toFixed(0)} {units === 'SI' ? 'kW' : 'BTU/s'}
+          Thomas Correlation: {results.thomas.toFixed(0)} {units === 'SI' ? 'kW' : `BTU/s (${results.kW.thomas.toFixed(0)} kW)`}
         </Chakra.Text>
         <Chakra.Text>
-          Babrauskas Correlation: {results.babrauskas.toFixed(0)} {units === 'SI' ? 'kW' : 'BTU/s'}
+          Babrauskas Correlation: {results.babrauskas.toFixed(0)} {units === 'SI' ? 'kW' : `BTU/s (${results.kW.babrauskas.toFixed(0)} kW)`}
         </Chakra.Text>
       </Chakra.VStack>
     </Chakra.Box>

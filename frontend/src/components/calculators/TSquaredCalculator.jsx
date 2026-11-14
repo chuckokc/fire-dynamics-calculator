@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
+import { alphaSI, solveTSquared } from '../../calculations/tSquared.js';
+import { DEFAULT_UNITS, convertInput } from '../../calculations/units.js';
 
 // T-Squared Growth Curve Visual Component
 const TSquaredVisual = ({ time, heatRelease, growthRate, calculateMode, units, customAlpha }) => {
@@ -330,7 +332,7 @@ const TSquaredCalculator = () => {
   const [heatRelease, setHeatRelease] = useState('');
   const [growthRate, setGrowthRate] = useState('medium');
   const [customAlpha, setCustomAlpha] = useState('');
-  const [units, setUnits] = useState('SI');
+  const [units, setUnits] = useState(DEFAULT_UNITS);
   const [calculateMode, setCalculateMode] = useState('heatRelease'); // 'heatRelease' or 'time'
   const [result, setResult] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -338,46 +340,8 @@ const TSquaredCalculator = () => {
   const [calculationHistory, setCalculationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
 
-  // Fire growth coefficients (α) in kW/s²
-  const growthCoefficients = {
-    slow: 0.00293,
-    medium: 0.01172,
-    fast: 0.0469,
-    ultrafast: 0.1876,
-    custom: null
-  };
-
-  // Get the current alpha value
-  const getAlpha = () => {
-    if (growthRate === 'custom') {
-      return parseFloat(customAlpha) || 0;
-    }
-    return growthCoefficients[growthRate];
-  };
-
-  // Unit conversion functions
-  const convertTime = (value, toImperial) => {
-    // Time is the same in both systems (seconds)
-    return value;
-  };
-
-  const convertHeatRelease = (value, toImperial) => {
-    if (!value) return '';
-    const numVal = parseFloat(value);
-    if (toImperial) {
-      return (numVal * 0.947817).toFixed(2); // kW to BTU/s
-    }
-    return (numVal * 1.055056).toFixed(2);   // BTU/s to kW
-  };
-
-  const convertAlpha = (value, toImperial) => {
-    if (!value) return '';
-    const numVal = parseFloat(value);
-    if (toImperial) {
-      return (numVal * 0.947817).toFixed(6); // kW/s² to BTU/s³
-    }
-    return (numVal * 1.055056).toFixed(6);   // BTU/s³ to kW/s²
-  };
+  // Growth coefficients and Q = αt² are in src/calculations/tSquared.js,
+  // where tests check them. A custom α is entered in kW/s² or BTU/s³.
 
   // Function to save calculation to history
   const saveToHistory = () => {
@@ -417,52 +381,16 @@ const TSquaredCalculator = () => {
 
   // Calculation function
   const calculate = () => {
-    const alpha = getAlpha();
-    if (!alpha) return;
-
-    let calculatedValue;
-    let resultType;
-    let resultUnit;
-
-    if (calculateMode === 'heatRelease') {
-      // Calculate Q = αt²
-      if (!time) return;
-      const t = parseFloat(time);
-      calculatedValue = alpha * t * t;
-      
-      // Convert to display units if needed
-      if (units === 'imperial') {
-        calculatedValue = calculatedValue * 0.947817; // kW to BTU/s
-      }
-      
-      resultType = 'Heat Release Rate';
-      resultUnit = units === 'SI' ? 'kW' : 'BTU/s';
-    } else {
-      // Calculate t = √(Q/α)
-      if (!heatRelease) return;
-      let Q = parseFloat(heatRelease);
-      
-      // Convert to SI if needed
-      if (units === 'imperial') {
-        Q = Q * 1.055056; // BTU/s to kW
-      }
-      
-      if (Q < 0 || alpha <= 0) {
-        setResult({ error: 'Invalid input values' });
-        return;
-      }
-      
-      calculatedValue = Math.sqrt(Q / alpha);
-      resultType = 'Time';
-      resultUnit = 'seconds';
-    }
-
-    setResult({
-      value: calculatedValue,
-      type: resultType,
-      unit: resultUnit,
-      alpha: alpha
+    const alpha = alphaSI({ growthRate, customAlpha, units });
+    const r = solveTSquared({
+      mode: calculateMode,
+      alpha,
+      t: parseFloat(time),
+      Q: parseFloat(heatRelease),
+      units
     });
+    if (!r) return;
+    setResult(r);
   };
 
   const copyResults = () => {
@@ -472,6 +400,9 @@ const TSquaredCalculator = () => {
     copyText += `Date: ${new Date().toLocaleString()}\n`;
     copyText += `Method: Q = αt²\n\n`;
     copyText += `Result: ${result.value.toFixed(2)} ${result.unit}`;
+    if (units === 'imperial' && result.kW !== undefined) {
+      copyText += ` (${result.kW.toFixed(2)} kW)`;
+    }
     
     if (calculateMode === 'time' && result.value) {
       copyText += ` (${(result.value / 60).toFixed(2)} minutes)`;
@@ -498,14 +429,15 @@ const TSquaredCalculator = () => {
     calculate();
   }, [time, heatRelease, growthRate, customAlpha, units, calculateMode]);
 
-  // Handle unit conversion
-  const handleUnitConversion = () => {
-    const toImperial = units === 'SI';
-    setHeatRelease(prev => prev ? convertHeatRelease(prev, toImperial) : '');
+  // Switching units converts what's already entered (time is always seconds)
+  const handleUnitsChange = (newUnits) => {
+    if (newUnits === units) return;
+    const toImperial = newUnits === 'imperial';
+    setHeatRelease(prev => convertInput(prev, 'hrr', toImperial));
     if (growthRate === 'custom') {
-      setCustomAlpha(prev => prev ? convertAlpha(prev, toImperial) : '');
+      setCustomAlpha(prev => convertInput(prev, 'alpha', toImperial, 6));
     }
-    setUnits(toImperial ? 'imperial' : 'SI');
+    setUnits(newUnits);
   };
 
   return (
@@ -623,7 +555,7 @@ const TSquaredCalculator = () => {
           <Chakra.VStack align="start" spacing={2}>
             <Chakra.RadioGroup 
               value={units} 
-              onChange={(newUnits) => setUnits(newUnits)}
+              onChange={handleUnitsChange}
             >
               <Chakra.HStack spacing={4}>
                 <Chakra.Radio value="SI">SI (kW)</Chakra.Radio>
@@ -631,13 +563,9 @@ const TSquaredCalculator = () => {
               </Chakra.HStack>
             </Chakra.RadioGroup>
             
-            <Chakra.Button 
-              size="sm" 
-              colorScheme="blue" 
-              onClick={handleUnitConversion}
-            >
-              Convert Current Values to {units === 'SI' ? 'Imperial' : 'SI'} Units
-            </Chakra.Button>
+            <Chakra.Text fontSize="xs" color="gray.500">
+              Switching units converts the values already entered.
+            </Chakra.Text>
           </Chakra.VStack>
         </Chakra.FormControl>
 
@@ -740,7 +668,7 @@ const TSquaredCalculator = () => {
               <Chakra.Box flex="1">
                 <Chakra.VStack align="start" spacing={2}>
                   <Chakra.Text fontWeight="bold">
-                    {result.type}: {result.value.toFixed(2)} {result.unit}
+                    {result.type}: {result.value.toFixed(2)} {result.unit}{units === 'imperial' && result.kW !== undefined ? ` (${result.kW.toFixed(0)} kW)` : ''}
                   </Chakra.Text>
                   <Chakra.Text fontSize="sm">
                     {calculateMode === 'heatRelease' ? (

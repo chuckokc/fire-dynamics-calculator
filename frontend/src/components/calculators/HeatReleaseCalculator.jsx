@@ -1,61 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
+import { MATERIAL_PROPERTIES, heatReleaseRate } from '../../calculations/hrr.js';
+import { DEFAULT_UNITS, convertInput } from '../../calculations/units.js';
 
 const HeatReleaseCalculator = () => {
   // State declarations
   const [material, setMaterial] = useState('');
   const [burningArea, setBurningArea] = useState('');
-  const [units, setUnits] = useState('imperial');
+  const [units, setUnits] = useState(DEFAULT_UNITS);
   const [manualMassFlux, setManualMassFlux] = useState('');
   const [result, setResult] = useState(null);
+  const [resultKW, setResultKW] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
   // Add this new state for calculation history
   const [calculationHistory, setCalculationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
 
-  // Update this section in your MATERIAL_PROPERTIES
-const MATERIAL_PROPERTIES = {
-    
-    // Liquids with both heat of combustion and mass flux
-    'liquefied_propane': { type: 'Liquids', name: 'Liquefied Propane', heatOfCombustion: 46.5, massFlux: 115.0 },
-    'liquefied_natural_gas': { type: 'Liquids', name: 'Liquefied Natural Gas', heatOfCombustion: 50.0, massFlux: 90.0 },
-    'benzene': { type: 'Liquids', name: 'Benzene', heatOfCombustion: 40.0, massFlux: 90.0 },
-    'butane': { type: 'Liquids', name: 'Butane', heatOfCombustion: 45.7, massFlux: 80.0 },
-    'hexane': { type: 'Liquids', name: 'Hexane', heatOfCombustion: 43.8, massFlux: 75.0 },
-    'xylene': { type: 'Liquids', name: 'Xylene', heatOfCombustion: 40.0, massFlux: 70.0 },
-    'jp-4': { type: 'Liquids', name: 'JP-4', heatOfCombustion: 43.2, massFlux: 60.0 },
-    'heptane': { type: 'Liquids', name: 'Heptane', heatOfCombustion: 44.6, massFlux: 70.0 },
-    'gasoline': { type: 'Liquids', name: 'Gasoline', heatOfCombustion: 43.7, massFlux: 55.0 },
-    'acetone': { type: 'Liquids', name: 'Acetone', heatOfCombustion: 30.8, massFlux: 40.0 },
-    'methanol': { type: 'Liquids', name: 'Methanol', heatOfCombustion: 19.8, massFlux: 22.0 },
-    'kerosene': { type: 'Liquids', name: 'Kerosene', heatOfCombustion: 43.2 },
-    'ethanol': { type: 'Liquids', name: 'Ethanol', heatOfCombustion: 26.8 },
-    
-    // Polymers and Solids
-    'hdpe': { type: 'Polymers', name: 'High-density Polyethylene (HDPE)', heatOfCombustion: 40.0 },
-    'polyethylene': { type: 'Polymers', name: 'Polyethylene', heatOfCombustion: 43.4 },
-    'polypropylene': { type: 'Polymers', name: 'Polypropylene', heatOfCombustion: 44.0 },
-    'polystyrene': { type: 'Polymers', name: 'Polystyrene', heatOfCombustion: 35.8 },
-    'polystyrene_granular': { type: 'Polymers', name: 'Polystyrene (Granular)', heatOfCombustion: 35.8, massFlux: 38.0 },
-    'pmma_granular': { type: 'Polymers', name: 'PMMA (Granular)', heatOfCombustion: 24.2, massFlux: 28.0 },
-    'polyethylene_granular': { type: 'Polymers', name: 'Polyethylene (Granular)', heatOfCombustion: 43.4, massFlux: 26.0 },
-    'polypropylene_granular': { type: 'Polymers', name: 'Polypropylene (Granular)', heatOfCombustion: 44.0, massFlux: 24.0 },
-    'nylon': { type: 'Polymers', name: 'Nylon', heatOfCombustion: 27.9 },
-    'nylon_6': { type: 'Polymers', name: 'Nylon 6', heatOfCombustion: 28.8 },
-    'abs': { type: 'Polymers', name: 'ABS', heatOfCombustion: 30.0 },
-    'abs_fr': { type: 'Polymers', name: 'ABS-FR', heatOfCombustion: 11.7 },
-    'rigid_polyurethane_foam': { type: 'Polymers', name: 'Rigid Polyurethane Foam', heatOfCombustion: 22.3, massFlux: 23.5 },
-    'flexible_polyurethane_foam': { type: 'Polymers', name: 'Flexible Polyurethane Foam', heatOfCombustion: 22.3, massFlux: 24.0 },
-    'pvc_granular': { type: 'Polymers', name: 'PVC (Granular)', heatOfCombustion: 10.0, massFlux: 16.0 },
-    
-    // Woods and Cellulosics
-    'corrugated_paper': { type: 'Woods', name: 'Corrugated Paper', heatOfCombustion: 13.2, massFlux: 14.0 },
-    'wood_crib': { type: 'Woods', name: 'Wood Crib', heatOfCombustion: 14.7, massFlux: 11.0 },
-    'douglas_fir': { type: 'Woods', name: 'Douglas Fir', heatOfCombustion: 14.7 },
-    'hemlock': { type: 'Woods', name: 'Hemlock', heatOfCombustion: 13.3 },
-    'plywood': { type: 'Woods', name: 'Plywood', heatOfCombustion: 11.9 },
-    'plywood_fr': { type: 'Woods', name: 'Plywood FR', heatOfCombustion: 11.2 }
-  };
+  // Material table (Quintiere, 2016) and the HRR equation are in
+  // src/calculations/hrr.js, where tests check them.
 
   // Group materials by type
   const groupedMaterials = Object.entries(MATERIAL_PROPERTIES).reduce((acc, [key, value]) => {
@@ -69,15 +31,6 @@ const MATERIAL_PROPERTIES = {
   const selectedMaterial = material ? MATERIAL_PROPERTIES[material] : null;
 const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
 
-  // Unit conversion function
-  const convertArea = (value, toImperial) => {
-    if (!value) return '';
-    const numVal = parseFloat(value);
-    if (toImperial) {
-      return (numVal * 10.7639).toFixed(2); // m² to ft²
-    }
-    return (numVal * 0.092903).toFixed(2);   // ft² to m²
-  };
 
   // Function to save calculation to history
   const saveToHistory = () => {
@@ -113,29 +66,23 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
   // Calculation function
   const calculateHeatRelease = () => {
     if (!material || !burningArea) return;
-
     const materialProps = MATERIAL_PROPERTIES[material];
-    
-    // Convert area to SI for calculations
-    let calculationArea = parseFloat(burningArea);
-    if (units === 'imperial') {
-      calculationArea = calculationArea * 0.092903; // Convert ft² to m²
-    }
+    const r = heatReleaseRate({
+      massFlux: materialProps.massFlux || parseFloat(manualMassFlux),
+      heatOfCombustion: materialProps.heatOfCombustion,
+      area: parseFloat(burningArea),
+      units
+    });
+    if (!r) return;
+    setResult(r.value);
+    setResultKW(r.kW);
+  };
 
-    // Get mass flux rate
-    const massFlux = materialProps.massFlux || parseFloat(manualMassFlux);
-    if (!massFlux) return;
-
-    // Calculate heat release rate
-    const massLossRate = massFlux / 1000;
-    const heatReleaseRate = massLossRate * calculationArea * materialProps.heatOfCombustion * 1000;
-
-    let finalResult = heatReleaseRate;
-    if (units === 'imperial') {
-      finalResult = heatReleaseRate * 0.947817;
-    }
-
-    setResult(finalResult);
+  // Switching units converts what's already entered (mass flux is always g/m²-s)
+  const handleUnitsChange = (newUnits) => {
+    if (newUnits === units) return;
+    setBurningArea(prev => convertInput(prev, 'area', newUnits === 'imperial'));
+    setUnits(newUnits);
   };
 
   const copyResults = () => {
@@ -146,7 +93,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
   let copyText = `Fire Dynamics Calculator - Heat Release Rate\n`;
   copyText += `Date: ${new Date().toLocaleString()}\n`;
   copyText += `Method: Q̇ = ṁ" × A × ΔHc\n\n`;
-  copyText += `Result: ${result.toFixed(2)} ${units === 'SI' ? 'kW' : 'BTU/s'}\n\n`;
+  copyText += `Result: ${result.toFixed(2)} ${units === 'SI' ? 'kW' : `BTU/s (${resultKW.toFixed(2)} kW)`}\n\n`;
   copyText += `Input Parameters:\n`;
   copyText += `- Material: ${materialName}\n`;
   copyText += `- Burning Area: ${burningArea} ${units === 'SI' ? 'm²' : 'ft²'}\n`;
@@ -253,7 +200,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
           <Chakra.VStack align="start" spacing={2}>
             <Chakra.RadioGroup 
               value={units} 
-              onChange={(newUnits) => setUnits(newUnits)}
+              onChange={handleUnitsChange}
             >
               <Chakra.HStack spacing={4}>
                 <Chakra.Radio value="SI">SI (m², kW)</Chakra.Radio>
@@ -261,17 +208,9 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
               </Chakra.HStack>
             </Chakra.RadioGroup>
             
-            <Chakra.Button 
-              size="sm" 
-              colorScheme="blue" 
-              onClick={() => {
-                const newUnits = units === 'SI' ? 'imperial' : 'SI';
-                setBurningArea(prev => convertArea(prev, units === 'SI'));
-                setUnits(newUnits);
-              }}
-            >
-              Convert Current Measurements to {units === 'SI' ? 'Imperial' : 'SI'} Units
-            </Chakra.Button>
+            <Chakra.Text fontSize="xs" color="gray.500">
+              Switching units converts the values already entered.
+            </Chakra.Text>
           </Chakra.VStack>
         </Chakra.FormControl>
 
@@ -355,7 +294,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
     <Chakra.Box flex="1">
       <Chakra.VStack align="start" spacing={2}>
         <Chakra.Text fontWeight="bold">
-          Heat Release Rate: {result.toFixed(0)} {units === 'SI' ? 'kW' : 'BTU/s'}
+          Heat Release Rate: {result.toFixed(0)} {units === 'SI' ? 'kW' : `BTU/s (${resultKW.toFixed(0)} kW)`}
         </Chakra.Text>
         {material && (
           <Chakra.Text fontSize="sm">
