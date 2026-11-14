@@ -382,7 +382,7 @@ const PointSourceCalculator = () => {
               <br />
               χᵣ = Radiative fraction (typical value 0.3)
               <br />
-              R = Distance from fire to target (m or ft)
+              R = Distance from the center of the fire to the target (m or ft)
               <br />
               π = Pi (approximately 3.14159)
             </Chakra.Text>
@@ -413,7 +413,7 @@ const PointSourceCalculator = () => {
             <Chakra.NumberInputField inputMode="decimal" />
           </Chakra.NumberInput>
           <Chakra.Text fontSize="sm" color="gray.600">
-            {units === 'SI' ? 'm' : 'ft'}
+            {units === 'SI' ? 'm' : 'ft'}, measured from the center of the fire (edge distance + ½ fire diameter)
           </Chakra.Text>
         </Chakra.FormControl>
 
