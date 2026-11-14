@@ -9,8 +9,8 @@ const ReferenceGuide = () => {
     { fuel: 'Trash bag/paper trash', weightKg: '1.2-14.1', weightLb: '2.6-31', peakHRR: '120-350' },
     { fuel: 'PVC waiting room chair, metal frame', weightKg: '15.4', weightLb: '34', peakHRR: '270' },
     { fuel: 'Cotton easy chair', weightKg: '17.7-31.8', weightLb: '39-70', peakHRR: '290-370' },
-    { fuel: 'Christmas tree, dry', weightKg: '20-Jun', weightLb: '13-44', peakHRR: '3000-5000' },
-    { fuel: 'Polyurethane mattress', weightKg: '3.2-14.1', weightLb: '31-Jul', peakHRR: '810-2630' },
+    { fuel: 'Christmas tree, dry', weightKg: '6-20', weightLb: '13-44', peakHRR: '3000-5000' },
+    { fuel: 'Polyurethane mattress', weightKg: '3.2-14.1', weightLb: '7-31', peakHRR: '810-2630' },
     { fuel: 'Polyurethane easy chair', weightKg: '12.2-27.7', weightLb: '27-61', peakHRR: '1350-1990' },
     { fuel: 'Polyurethane sofa', weightKg: '51.3', weightLb: '113', peakHRR: '3120' }
   ];

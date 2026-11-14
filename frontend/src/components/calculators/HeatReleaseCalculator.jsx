@@ -190,6 +190,9 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
               <br />
               ΔHc = Heat of combustion (kJ/g)
             </Chakra.Text>
+            <Chakra.Text fontSize="sm" color="gray.600" mt={3} fontStyle="italic">
+              Note: Built-in mass flux values (Quintiere, 2016) are typical for well-developed, free-burning fires. Smaller pools and spills (roughly 2 m / 6 ft across or less) burn more slowly, so this simple equation can overestimate their heat release rate. NUREG-1805 adds a small-pool correction, (1 − e^−kβD), that this calculator leaves out.
+            </Chakra.Text>
           </Chakra.CardBody>
         </Chakra.Card>
 

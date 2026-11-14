@@ -12,7 +12,7 @@ import { useRegisterSW } from 'virtual:pwa-register/react';
 import { ColorModeScript } from '@chakra-ui/react';
 import theme from './theme';
 
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.3.1';
 
 // MainApp component contains all calculator functionality and the main interface
 const MainApp = () => {
