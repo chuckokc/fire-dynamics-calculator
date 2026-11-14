@@ -27,11 +27,40 @@ Deliberate simplifications (not NUREG):
 - Heat release rate uses Q = m″·A·ΔHc with Quintiere (2016) values, without
   NUREG's small-pool correction.
 
+## Access code
+
+The site is protected by an access code that is checked on the server, by
+two Netlify Edge Functions in `frontend/netlify/edge-functions/`. Until a
+visitor enters the code, Netlify sends them only the login page. None of the
+app's files are served, and the code is not in this repo or in the app.
+
+- **The code** is the `ACCESS_CODE` environment variable in Netlify (Project
+  configuration > Environment variables). Set it for all deploy contexts
+  (production and deploy previews). Do not tick "Contains secret values":
+  Netlify's secret scanner fails the build if a short code word appears
+  anywhere in the app or the docs. Codes are not case-sensitive.
+- **To change the code**, edit `ACCESS_CODE` in Netlify. No redeploy is
+  needed. Everyone is signed out. Phones and computers that have the app
+  installed are cleared and asked for the new code the next time they are
+  online and open it. A device that stays offline keeps its cached copy until
+  it next connects.
+- **Sessions** last 180 days and renew whenever the app is opened online.
+- **If `ACCESS_CODE` is missing** the site shows "Almost ready" and serves
+  nothing else (it fails closed).
+- Guessing is limited to 100 requests per minute per IP address, plus a short
+  delay after a wrong code. Use a phrase of two or three words rather than a
+  single common word.
+- `npm run dev` does not run the Edge Functions, so the local dev server is
+  not gated.
+- Public on purpose: the login page, the install manifest and the icons.
+
 ## Checks
 
 `frontend/tests/calculations.test.js` compares the calculations with the
 NUREG-1805 spreadsheet results (04 flame height, 05.1 heat flux,
-13 flashover) and other reference values.
+13 flashover) and other reference values. `frontend/tests/access.test.js`
+checks the access gate: signed-out visitors get nothing, a changed code
+signs everyone out, and nothing opens when no code is set.
 
 ```
 cd frontend
