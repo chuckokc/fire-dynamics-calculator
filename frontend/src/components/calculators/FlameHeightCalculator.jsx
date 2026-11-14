@@ -543,9 +543,6 @@ const FlameHeightCalculator = () => {
         >
           Save to History
         </Chakra.Button>
-        {calculateMode === 'heatRelease' && (
-          <SendHRRMenu kW={result.kW} from="Flame Height" exclude="flameHeight" />
-        )}
       </Chakra.VStack>
     </Chakra.Alert>
   )
@@ -575,6 +572,11 @@ const FlameHeightCalculator = () => {
             </Chakra.Alert>
           );
         })()}
+        {calculateMode === 'heatRelease' && result && !result.error && (
+        <Chakra.Flex justify="flex-end">
+          <SendHRRMenu kW={result.kW} from="Flame Height" exclude="flameHeight" />
+        </Chakra.Flex>
+        )}
         {result && !result.error && <ShowWork steps={result.steps} />}
  {/* Visual Flame Height Indicator */}
         {calculateMode === 'flameHeight' && result && !result.error && result.value > 0 && (

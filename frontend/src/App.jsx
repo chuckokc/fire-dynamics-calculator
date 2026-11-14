@@ -21,7 +21,8 @@ const MainApp = () => {
   const { colorMode, toggleColorMode } = Chakra.useColorMode();
   const bgColor = Chakra.useColorModeValue('gray.50', 'gray.800');
   const borderColor = Chakra.useColorModeValue('gray.200', 'gray.600');
-  // Controlled so a calculator can send its HRR to another tab
+  // Controlled so a calculator can send its HRR to another tab.
+  // keepMounted: a calculator keeps its inputs and results when you switch tabs.
   const [tabIndex, setTabIndex] = useState(0);
 
   // Add PWA update handling
@@ -101,7 +102,7 @@ const MainApp = () => {
 
         {/* Main calculator interface with tabs */}
         <HrrTransferProvider onNavigate={setTabIndex}>
-        <Chakra.Tabs variant="enclosed" borderColor={borderColor} isLazy index={tabIndex} onChange={setTabIndex}>
+        <Chakra.Tabs variant="enclosed" borderColor={borderColor} isLazy lazyBehavior="keepMounted" index={tabIndex} onChange={setTabIndex}>
           <Chakra.TabList overflowX="auto" overflowY="hidden" sx={{ scrollbarWidth: 'thin', '&::-webkit-scrollbar': { height: '4px' } }}>
             <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Heat Release Rate</Chakra.Tab>
             <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Flame Height</Chakra.Tab>

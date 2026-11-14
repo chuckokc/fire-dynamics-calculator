@@ -66,13 +66,16 @@ export function SendHRRMenu({ kW, from, exclude }) {
       <Chakra.MenuButton as={Chakra.Button} size="sm" colorScheme="teal" rightIcon={<ArrowRight size={14} />}>
         Use this HRR in…
       </Chakra.MenuButton>
-      <Chakra.MenuList>
-        {TARGETS.filter((t) => t.key !== exclude).map((t) => (
-          <Chakra.MenuItem key={t.key} onClick={() => ctx.send(t.key, kW, from)}>
-            {t.label}
-          </Chakra.MenuItem>
-        ))}
-      </Chakra.MenuList>
+      {/* Portal: render the list at the page level so the result box can't clip it */}
+      <Chakra.Portal>
+        <Chakra.MenuList zIndex="dropdown">
+          {TARGETS.filter((t) => t.key !== exclude).map((t) => (
+            <Chakra.MenuItem key={t.key} onClick={() => ctx.send(t.key, kW, from)}>
+              {t.label}
+            </Chakra.MenuItem>
+          ))}
+        </Chakra.MenuList>
+      </Chakra.Portal>
     </Chakra.Menu>
   );
 }

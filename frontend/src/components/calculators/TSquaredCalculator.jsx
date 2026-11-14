@@ -716,12 +716,14 @@ const TSquaredCalculator = () => {
                 >
                   Save to History
                 </Chakra.Button>
-                {calculateMode === 'heatRelease' && (
-                  <SendHRRMenu kW={result.kW} from="T-Squared Growth" exclude="tSquared" />
-                )}
               </Chakra.VStack>
             </Chakra.Alert>
           )
+        )}
+        {calculateMode === 'heatRelease' && result && !result.error && (
+        <Chakra.Flex justify="flex-end">
+          <SendHRRMenu kW={result.kW} from="T-Squared Growth" exclude="tSquared" />
+        </Chakra.Flex>
         )}
         {result && !result.error && <ShowWork steps={result.steps} />}
 

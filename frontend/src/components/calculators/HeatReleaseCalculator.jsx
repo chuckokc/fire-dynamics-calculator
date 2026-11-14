@@ -389,10 +389,14 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
       >
         Save to History
       </Chakra.Button>
-      <SendHRRMenu kW={resultKW} from="Heat Release Rate" />
     </Chakra.VStack>
   </Chakra.Alert>
 )}
+        {result && (
+        <Chakra.Flex justify="flex-end">
+          <SendHRRMenu kW={resultKW} from="Heat Release Rate" />
+        </Chakra.Flex>
+        )}
         {result && <ShowWork steps={resultSteps} />}
       </Chakra.VStack>
     </Chakra.Box>
