@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
+import { pointSourceFlux, pointSourceFluxSI, radiusForFluxSI } from '../../calculations/pointSource.js';
+import { DEFAULT_UNITS, convertInput, toSI } from '../../calculations/units.js';
 
 // Radiation Zone Visual Component
 const RadiationZoneVisual = ({ heatRelease, distance, radiativeFraction, units }) => {
@@ -15,20 +17,15 @@ const RadiationZoneVisual = ({ heatRelease, distance, radiativeFraction, units }
   ];
 
   // Convert inputs to SI for calculation
-  let Q = parseFloat(heatRelease) || 0;
-  let R = parseFloat(distance) || 0;
+  const Q = toSI(parseFloat(heatRelease) || 0, 'hrr', units);
+  const R = toSI(parseFloat(distance) || 0, 'length', units);
   const Xr = parseFloat(radiativeFraction) || 0.3;
-
-  if (units === 'imperial') {
-    Q = Q * 1.055056;  // Convert BTU/s to kW
-    R = R * 0.3048;    // Convert ft to m
-  }
 
   // Calculate distance for each critical flux level
   // R = sqrt((Q * Xr) / (4 * π * q"))
   const calculateRadius = (criticalFlux) => {
     if (!Q || !Xr || !criticalFlux) return 0;
-    return Math.sqrt((Q * Xr) / (4 * Math.PI * criticalFlux));
+    return radiusForFluxSI(Q, Xr, criticalFlux);
   };
 
   // Scale factor for visualization
@@ -37,7 +34,7 @@ const RadiationZoneVisual = ({ heatRelease, distance, radiativeFraction, units }
   const scale = maxVisualRadius / maxRealRadius;
 
   // Calculate current heat flux at specified distance
-  const currentFlux = R > 0 ? (Q * Xr) / (4 * Math.PI * Math.pow(R, 2)) : 0;
+  const currentFlux = R > 0 ? pointSourceFluxSI(Q, Xr, R) : 0;
 
   return (
     <Chakra.Box p={4} bg={bgColor} borderRadius="md">
@@ -202,8 +199,9 @@ const PointSourceCalculator = () => {
   const [heatRelease, setHeatRelease] = useState('');
   const [distance, setDistance] = useState('');
   const [radiativeFraction, setRadiativeFraction] = useState('0.3');
-  const [units, setUnits] = useState('imperial');
+  const [units, setUnits] = useState(DEFAULT_UNITS);
   const [result, setResult] = useState(null);
+  const [resultKW, setResultKW] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
   // Add these new states for calculation history
   const [calculationHistory, setCalculationHistory] = useState([]);
@@ -248,24 +246,6 @@ const PointSourceCalculator = () => {
   };
 
   // Unit conversion functions
-  const convertDistance = (value, toImperial) => {
-    if (!value) return '';
-    const numVal = parseFloat(value);
-    if (toImperial) {
-      return (numVal * 3.28084).toFixed(2); // m to ft
-    }
-    return (numVal * 0.3048).toFixed(2);    // ft to m
-  };
-
-  const convertHeatRelease = (value, toImperial) => {
-    if (!value) return '';
-    const numVal = parseFloat(value);
-    if (toImperial) {
-      return (numVal * 0.947817).toFixed(2); // kW to BTU/s
-    }
-    return (numVal * 1.055056).toFixed(2);   // BTU/s to kW
-  };
-
   const convertHeatFlux = (value, toImperial) => {
     if (!value) return '';
     const numVal = parseFloat(value);
@@ -288,7 +268,7 @@ const PointSourceCalculator = () => {
       units: units,
       result: result,
       // Store actual flux value in SI for comparison
-      fluxKW: units === 'imperial' ? convertHeatFlux(result, false) : result
+      fluxKW: resultKW
     };
     
     // Keep only last 10 calculations
@@ -306,29 +286,24 @@ const PointSourceCalculator = () => {
 
   // Calculation function
   const calculateHeatFlux = () => {
-    if (!heatRelease || !distance || !radiativeFraction) return;
+    const r = pointSourceFlux({
+      Q: parseFloat(heatRelease),
+      R: parseFloat(distance),
+      chi: parseFloat(radiativeFraction),
+      units
+    });
+    if (!r) return;
+    setResult(r.value);
+    setResultKW(r.kWm2);
+  };
 
-    // Convert inputs to SI for calculation
-    let Q = parseFloat(heatRelease);
-    let R = parseFloat(distance);
-    const Xr = parseFloat(radiativeFraction);
-
-    if (units === 'imperial') {
-      Q = Q * 1.055056;  // Convert BTU/s to kW
-      R = R * 0.3048;    // Convert ft to m
-    }
-
-    // Calculate radiative heat flux
-    // q" = (Q * Xr) / (4 * π * R²)
-    const heatFlux = (Q * Xr) / (4 * Math.PI * Math.pow(R, 2));
-
-    // Convert result if needed
-    let finalResult = heatFlux;
-    if (units === 'imperial') {
-      finalResult = convertHeatFlux(heatFlux, true);
-    }
-
-    setResult(finalResult);
+  // Switching units converts what's already entered
+  const handleUnitsChange = (newUnits) => {
+    if (newUnits === units) return;
+    const toImperial = newUnits === 'imperial';
+    setHeatRelease(prev => convertInput(prev, 'hrr', toImperial));
+    setDistance(prev => convertInput(prev, 'length', toImperial));
+    setUnits(newUnits);
   };
 
   const copyResults = () => {
@@ -338,7 +313,7 @@ const PointSourceCalculator = () => {
     copyText += `Date: ${new Date().toLocaleString()}\n`;
     copyText += `Method: q" = χᵣQ̇/(4πR²)\n\n`;
     copyText += `Result:\n`;
-    copyText += `- Radiative Heat Flux: ${result.toFixed(2)} ${units === 'SI' ? 'kW/m²' : 'BTU/ft²/s'}\n\n`;
+    copyText += `- Radiative Heat Flux: ${result.toFixed(2)} ${units === 'SI' ? 'kW/m²' : `BTU/ft²/s (${resultKW.toFixed(2)} kW/m²)`}\n\n`;
     copyText += `Input Parameters:\n`;
     copyText += `- Heat Release Rate: ${heatRelease} ${units === 'SI' ? 'kW' : 'BTU/s'}\n`;
     copyText += `- Distance: ${distance} ${units === 'SI' ? 'm' : 'ft'}\n`;
@@ -438,7 +413,7 @@ const PointSourceCalculator = () => {
           <Chakra.VStack align="start" spacing={2}>
             <Chakra.RadioGroup 
               value={units} 
-              onChange={(newUnits) => setUnits(newUnits)}
+              onChange={handleUnitsChange}
             >
               <Chakra.HStack spacing={4}>
                 <Chakra.Radio value="SI">SI (m, kW)</Chakra.Radio>
@@ -446,18 +421,9 @@ const PointSourceCalculator = () => {
               </Chakra.HStack>
             </Chakra.RadioGroup>
             
-            <Chakra.Button 
-              size="sm" 
-              colorScheme="blue" 
-              onClick={() => {
-                const newUnits = units === 'SI' ? 'imperial' : 'SI';
-                setHeatRelease(prev => convertHeatRelease(prev, units === 'SI'));
-                setDistance(prev => convertDistance(prev, units === 'SI'));
-                setUnits(newUnits);
-              }}
-            >
-              Convert Current Measurements to {units === 'SI' ? 'Imperial' : 'SI'} Units
-            </Chakra.Button>
+            <Chakra.Text fontSize="xs" color="gray.500">
+              Switching units converts the values already entered.
+            </Chakra.Text>
           </Chakra.VStack>
         </Chakra.FormControl>
 
@@ -553,7 +519,7 @@ const PointSourceCalculator = () => {
               <Chakra.Box flex="1">
                 <Chakra.VStack align="start" spacing={2}>
                   <Chakra.Text fontWeight="bold">
-                    Radiative Heat Flux: {result.toFixed(2)} {units === 'SI' ? 'kW/m²' : 'BTU/ft²/s'}
+                    Radiative Heat Flux: {result.toFixed(2)} {units === 'SI' ? 'kW/m²' : `BTU/ft²/s (${resultKW.toFixed(2)} kW/m²)`}
                   </Chakra.Text>
                   <Chakra.Text fontSize="sm">
                     Based on:

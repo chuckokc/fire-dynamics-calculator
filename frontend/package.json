@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "node --test \"tests/**/*.test.js\"",
+    "prebuild": "npm test",
     "build": "vite build",
     "preview": "vite_preview",
     "generate-icons": "node scripts/generateIcons.js"

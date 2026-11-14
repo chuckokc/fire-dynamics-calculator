@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
+import { FIRE_LOCATIONS, solveFlameHeight } from '../../calculations/flameHeight.js';
+import { DEFAULT_UNITS, convertInput } from '../../calculations/units.js';
 
 // Visual Flame Height Indicator Component
 const FlameHeightVisual = ({ flameHeight, units }) => {
@@ -152,46 +154,13 @@ const FlameHeightVisual = ({ flameHeight, units }) => {
   );
 };
 
-// Fire location options. Middle of room uses Heskestad (NUREG-1805 Ch. 3);
-// wall and corner use the NUREG-1805 Chapter 4 correlations (spreadsheet
-// 04_Flame_Height_Calculations: Wall_Flame_Height and Corner_Flame_Height).
-// All equations are in SI: Q in kW, lengths in m.
-const FIRE_LOCATIONS = {
-  center: {
-    label: 'Middle of room (away from walls)',
-    method: "Heskestad's Correlation",
-    equation: 'L = 0.235Q̇²/⁵ - 1.02D',
-    sizeName: 'Fire Diameter',
-    sizeSymbol: 'D',
-    sizeDescription: 'Fire diameter',
-    usesSize: true
-  },
-  wall: {
-    label: 'Against a wall',
-    method: 'Wall Fire Correlation (Delichatsios, NUREG-1805 Ch. 4)',
-    equation: 'L = 0.034(Q̇/W)²/³',
-    sizeName: 'Fire Length Along Wall',
-    sizeSymbol: 'W',
-    sizeDescription: 'Length of the fire along the wall',
-    usesSize: true,
-    nfpaNote: 'NFPA 921 (2024) 5.6.4.6.4: a wall restricts air entrainment and makes the upper layer hotter, but tests showed no significant increase in flame height compared with the same fire away from the wall.'
-  },
-  corner: {
-    label: 'In a corner',
-    method: 'Corner Fire Correlation (Hasemi & Tokunaga, NUREG-1805 Ch. 4)',
-    equation: 'L = 0.075Q̇³/⁵',
-    usesSize: false,
-    nfpaNote: 'NFPA 921 (2024) 5.6.4.6.5: a corner restricts air entrainment even more, and tests showed a significant increase in flame height compared with the same fire in the open.'
-  }
-};
-
 const FlameHeightCalculator = () => {
   // State declarations
   const [heatRelease, setHeatRelease] = useState('');
   const [diameter, setDiameter] = useState(''); // fire diameter (middle) or length along wall (wall)
   const [flameHeight, setFlameHeight] = useState('');
   const [fireLocation, setFireLocation] = useState('center');
-  const [units, setUnits] = useState('SI');
+  const [units, setUnits] = useState(DEFAULT_UNITS);
   const [calculateMode, setCalculateMode] = useState('flameHeight'); // What to calculate
   const [result, setResult] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -207,25 +176,6 @@ const FlameHeightCalculator = () => {
     if (!FIRE_LOCATIONS[newLocation].usesSize && calculateMode === 'diameter') {
       setCalculateMode('flameHeight');
     }
-  };
-
-  // Unit conversion functions
-  const convertLength = (value, toImperial) => {
-    if (!value) return '';
-    const numVal = parseFloat(value);
-    if (toImperial) {
-      return (numVal * 3.28084).toFixed(2); // m to ft
-    }
-    return (numVal * 0.3048).toFixed(2);    // ft to m
-  };
-
-  const convertHeatRelease = (value, toImperial) => {
-    if (!value) return '';
-    const numVal = parseFloat(value);
-    if (toImperial) {
-      return (numVal * 0.947817).toFixed(2); // kW to BTU/s
-    }
-    return (numVal * 1.055056).toFixed(2);   // BTU/s to kW
   };
 
   // Function to save calculation to history
@@ -263,98 +213,16 @@ const FlameHeightCalculator = () => {
     setShowHistory(false);
   };
 
-  // Calculation functions for each mode
+  // Calculation: equations are in src/calculations/flameHeight.js (tested)
   const calculate = () => {
-    // Convert all inputs to SI for calculation
-    let Q = parseFloat(heatRelease) || 0;
-    let D = parseFloat(diameter) || 0;
-    let L = parseFloat(flameHeight) || 0;
-
-    if (units === 'imperial') {
-      Q = Q * 1.055056;  // Convert BTU/s to kW
-      D = D * 0.3048;    // Convert ft to m
-      L = L * 0.3048;    // Convert ft to m
-    }
-
-    let calculatedValue;
-    let resultType;
-    let resultUnit;
-    const needsSize = FIRE_LOCATIONS[fireLocation].usesSize;
-
-    switch(calculateMode) {
-      case 'flameHeight':
-        if (!heatRelease || (needsSize && !diameter)) { setResult(null); return; }
-        if (fireLocation === 'wall') {
-          // L = 0.034 (Q/W)^(2/3)
-          calculatedValue = 0.034 * Math.pow(Q / D, 2 / 3);
-        } else if (fireLocation === 'corner') {
-          // L = 0.075 Q^(3/5)
-          calculatedValue = 0.075 * Math.pow(Q, 0.6);
-        } else {
-          // L = 0.235Q^(2/5) - 1.02D
-          calculatedValue = (0.235 * Math.pow(Q, 0.4)) - (1.02 * D);
-        }
-        resultType = 'Flame Height';
-        resultUnit = units === 'SI' ? 'm' : 'ft';
-        break;
-
-      case 'heatRelease':
-        if (!flameHeight || (needsSize && !diameter)) { setResult(null); return; }
-        if (fireLocation === 'wall') {
-          // Q = W (L/0.034)^(3/2)
-          calculatedValue = D * Math.pow(L / 0.034, 1.5);
-        } else if (fireLocation === 'corner') {
-          // Q = (L/0.075)^(5/3)
-          calculatedValue = Math.pow(L / 0.075, 5 / 3);
-        } else {
-          // Q = ((L + 1.02D)/0.235)^(5/2)
-          const intermediate = (L + (1.02 * D)) / 0.235;
-          if (intermediate <= 0) {
-            setResult({ error: 'Invalid input combination. Flame height too small for given diameter.' });
-            return;
-          }
-          calculatedValue = Math.pow(intermediate, 2.5);
-        }
-        resultType = 'Heat Release Rate';
-        resultUnit = units === 'SI' ? 'kW' : 'BTU/s';
-        break;
-
-      case 'diameter':
-        if (!heatRelease || !flameHeight || !needsSize) { setResult(null); return; }
-        if (fireLocation === 'wall') {
-          // W = Q / (L/0.034)^(3/2)
-          calculatedValue = Q / Math.pow(L / 0.034, 1.5);
-        } else {
-          // D = (0.235Q^(2/5) - L)/1.02
-          const numerator = (0.235 * Math.pow(Q, 0.4)) - L;
-          if (numerator <= 0) {
-            setResult({ error: 'Invalid input combination. Flame height too large for given heat release.' });
-            return;
-          }
-          calculatedValue = numerator / 1.02;
-        }
-        resultType = FIRE_LOCATIONS[fireLocation].sizeName;
-        resultUnit = units === 'SI' ? 'm' : 'ft';
-        break;
-
-      default:
-        return;
-    }
-
-    // Convert result back to selected units if needed
-    if (units === 'imperial') {
-      if (calculateMode === 'heatRelease') {
-        calculatedValue = calculatedValue * 0.947817; // kW to BTU/s
-      } else {
-        calculatedValue = calculatedValue * 3.28084; // m to ft
-      }
-    }
-
-    setResult({
-      value: calculatedValue,
-      type: resultType,
-      unit: resultUnit
-    });
+    setResult(solveFlameHeight({
+      mode: calculateMode,
+      location: fireLocation,
+      Q: parseFloat(heatRelease),
+      D: parseFloat(diameter),
+      L: parseFloat(flameHeight),
+      units
+    }));
   };
 
   const copyResults = () => {
@@ -364,7 +232,11 @@ const FlameHeightCalculator = () => {
   copyText += `Date: ${new Date().toLocaleString()}\n`;
   copyText += `Fire Location: ${location.label}\n`;
   copyText += `Method: ${location.method} (${location.equation})\n\n`;
-  copyText += `Result: ${result.value.toFixed(2)} ${result.unit}\n\n`;
+  copyText += `Result: ${result.value.toFixed(2)} ${result.unit}`;
+  if (units === 'imperial' && result.kW !== undefined) {
+    copyText += ` (${result.kW.toFixed(2)} kW)`;
+  }
+  copyText += `\n\n`;
   copyText += `Input Parameters:\n`;
 
   if (calculateMode !== 'heatRelease' && heatRelease) {
@@ -388,13 +260,14 @@ const FlameHeightCalculator = () => {
     calculate();
   }, [heatRelease, diameter, flameHeight, units, calculateMode, fireLocation]);
 
-  // Handle unit conversion
-  const handleUnitConversion = () => {
-    const toImperial = units === 'SI';
-    setHeatRelease(prev => prev ? convertHeatRelease(prev, toImperial) : '');
-    setDiameter(prev => prev ? convertLength(prev, toImperial) : '');
-    setFlameHeight(prev => prev ? convertLength(prev, toImperial) : '');
-    setUnits(toImperial ? 'imperial' : 'SI');
+  // Switching units converts what's already entered
+  const handleUnitsChange = (newUnits) => {
+    if (newUnits === units) return;
+    const toImperial = newUnits === 'imperial';
+    setHeatRelease(prev => convertInput(prev, 'hrr', toImperial));
+    setDiameter(prev => convertInput(prev, 'length', toImperial));
+    setFlameHeight(prev => convertInput(prev, 'length', toImperial));
+    setUnits(newUnits);
   };
 
   return (
@@ -515,7 +388,7 @@ const FlameHeightCalculator = () => {
           <Chakra.VStack align="start" spacing={2}>
             <Chakra.RadioGroup 
               value={units} 
-              onChange={(newUnits) => setUnits(newUnits)}
+              onChange={handleUnitsChange}
             >
               <Chakra.HStack spacing={4}>
                 <Chakra.Radio value="SI">SI (m, kW)</Chakra.Radio>
@@ -523,13 +396,9 @@ const FlameHeightCalculator = () => {
               </Chakra.HStack>
             </Chakra.RadioGroup>
             
-            <Chakra.Button 
-              size="sm" 
-              colorScheme="blue" 
-              onClick={handleUnitConversion}
-            >
-              Convert Current Values to {units === 'SI' ? 'Imperial' : 'SI'} Units
-            </Chakra.Button>
+            <Chakra.Text fontSize="xs" color="gray.500">
+              Switching units converts the values already entered.
+            </Chakra.Text>
           </Chakra.VStack>
         </Chakra.FormControl>
 
@@ -614,7 +483,7 @@ const FlameHeightCalculator = () => {
       <Chakra.Box flex="1">
         <Chakra.VStack align="start" spacing={2}>
           <Chakra.Text fontWeight="bold">
-            {result.type}: {result.value > 0 ? result.value.toFixed(2) : 'N/A'} {result.unit}
+            {result.type}: {result.value > 0 ? result.value.toFixed(2) : 'N/A'} {result.unit}{units === 'imperial' && result.kW > 0 ? ` (${result.kW.toFixed(0)} kW)` : ''}
           </Chakra.Text>
           <Chakra.Text fontSize="sm">
             Based on:

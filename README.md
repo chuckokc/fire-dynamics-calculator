@@ -1,8 +1,37 @@
-# React + Vite
+# Fire Dynamics Calculator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An introductory fire dynamics calculator for fire investigators, based on
+NUREG-1805 methods. Live at https://fire-dynamics-calculator.netlify.app
+(deployed by Netlify from the `main` branch; Node version pinned in
+`frontend/.nvmrc`).
 
-Currently, two official plugins are available:
+Calculators: Heat Release Rate, Flame Height (middle of room / wall /
+corner), Point Source Radiation, Flashover (MQH, Babrauskas, Thomas) and
+T-Squared growth, plus a Reference Data tab.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Where the math lives
+
+All equations, material tables and unit conversions are in
+`frontend/src/calculations/`. The React components in
+`frontend/src/components/calculators/` only handle the screen.
+
+Deliberate simplifications (not NUREG):
+- Flashover MQH uses h_k = √(kρc/t) with t = 600 s, so no wall thickness is
+  needed. NUREG's spreadsheet uses h_k = k/δ.
+- Heat release rate uses Q = m″·A·ΔHc with Quintiere (2016) values, without
+  NUREG's small-pool correction.
+
+## Checks
+
+`frontend/tests/calculations.test.js` compares the calculations with the
+NUREG-1805 spreadsheet results (04 flame height, 05.1 heat flux,
+13 flashover) and other reference values.
+
+```
+cd frontend
+npm test          # run the checks
+npm run build     # runs the checks first; the build stops if any fail
+```
+
+Netlify runs `npm run build`, so a change that breaks the math fails the
+deploy and the live site stays as it was.
