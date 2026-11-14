@@ -14,6 +14,7 @@ import {
   handleGate,
   isConfigured,
   isPublicPath,
+  REQUEST_ACCESS_MAILTO,
   loginPage,
   normalizeCode,
   readCookie,
@@ -180,6 +181,27 @@ test('login page: shows the form, never the code, and is not cached', async () =
   assert.equal(html.toLowerCase().includes(ENV.ACCESS_CODE), false);
   assert.doesNotMatch(html, /role="alert"/);
   assert.match(loginPage({ error: true }), /role="alert"/);
+});
+
+test('login page: offers an email to the creator to request the code', async () => {
+  // The link itself: right address, subject, and a body with room for name/agency.
+  const url = new URL(REQUEST_ACCESS_MAILTO);
+  assert.equal(url.protocol, 'mailto:');
+  assert.equal(url.pathname, 'chuckokc@gmail.com');
+  assert.equal(url.searchParams.get('subject'), 'Fire Dynamics Calculator Access Request');
+  const body = url.searchParams.get('body');
+  assert.match(body, /access code/i);
+  assert.match(body, /Name:/);
+  assert.match(body, /Agency \/ school \/ class:/);
+  assert.ok(body.includes('\r\n'), 'body should have line breaks');
+  assert.equal(body.toLowerCase().includes(ENV.ACCESS_CODE), false);
+
+  // On the page, as a clickable link (the & between subject and body is escaped for HTML).
+  for (const html of [loginPage(), loginPage({ error: true })]) {
+    assert.match(html, /Don't have a code\? <a href="mailto:chuckokc@gmail\.com\?subject=Fire%20Dynamics%20Calculator%20Access%20Request&amp;body=/);
+    assert.match(html, />Email Chuck to request one<\/a>/);
+    assert.match(html, /Provide Feedback/);
+  }
 });
 
 test('login: the right code signs you in with a safe cookie and sends you to the app', async () => {

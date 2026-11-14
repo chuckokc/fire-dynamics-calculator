@@ -17,6 +17,25 @@ const NO_STORE = { 'cache-control': 'no-store' };
 
 const encoder = new TextEncoder();
 
+// People who do not have the code can email the creator from the login page.
+const CREATOR_EMAIL = 'chuckokc@gmail.com';
+export const REQUEST_ACCESS_MAILTO =
+  `mailto:${CREATOR_EMAIL}?subject=${encodeURIComponent('Fire Dynamics Calculator Access Request')}` +
+  `&body=${encodeURIComponent(
+    [
+      'Hello Chuck,',
+      '',
+      'I would like the access code for the Fire Dynamics Calculator.',
+      '',
+      'Name:',
+      'Agency / school / class:',
+      'How I heard about the calculator:',
+      '',
+      'Thank you.',
+    ].join('\r\n')
+  )}`;
+const FEEDBACK_MAILTO = `mailto:${CREATOR_EMAIL}?subject=${encodeURIComponent('Fire Dynamics Calculator Feedback')}`;
+
 // Codes are not case-sensitive (same as the old in-app screen) and ignore stray spaces.
 export const normalizeCode = (value) => String(value ?? '').trim().toUpperCase();
 
@@ -180,6 +199,7 @@ export function loginPage({ error = false } = {}) {
   .primary:hover { background:var(--blue-dark); }
   .error { margin:0 0 1rem; padding:.6rem .8rem; border:1px solid var(--err); border-radius:.4rem; color:var(--err); text-align:left; }
   hr { border:0; border-top:1px solid var(--line); margin:1.5rem 0 1rem; }
+  .request { margin:1rem 0 0; font-size:.95rem; }
   .small { margin:.25rem 0; font-size:.9rem; color:var(--muted); }
   a { color:var(--blue); }
 </style>
@@ -197,9 +217,10 @@ export function loginPage({ error = false } = {}) {
     </div>
     <button type="submit" class="primary">Access Calculator</button>
   </form>
+  <p class="request">Don't have a code? <a href="${REQUEST_ACCESS_MAILTO.replace(/&/g, '&amp;')}">Email Chuck to request one</a></p>
   <hr>
   <p class="small">With dedication from Chuck ❤️ Christine Carpenter</p>
-  <p class="small"><a href="mailto:chuckokc@gmail.com?subject=Fire%20Dynamics%20Calculator%20Feedback">Provide Feedback</a></p>
+  <p class="small"><a href="${FEEDBACK_MAILTO}">Provide Feedback</a></p>
 </main>
 <script>
   var code = document.getElementById('code');

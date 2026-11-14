@@ -54,6 +54,9 @@ app's files are served, and the code is not in this repo or in the app.
   single common word.
 - `npm run dev` does not run the Edge Functions, so the local dev server is
   not gated.
+- The login page has an "Email Chuck to request one" link. It opens the
+  visitor's email app with a message to the creator, ready to fill in with their
+  name and agency or class.
 - Public on purpose: the login page, the install manifest and the icons.
 
 ## Checks
