@@ -8,11 +8,12 @@ import FlashoverCalculator from './components/calculators/FlashoverCalculator';
 import ReferenceGuide from './components/reference/ReferenceGuide';
 import Authentication from './components/Authentication';
 import TSquaredCalculator from './components/calculators/TSquaredCalculator';
+import { HrrTransferProvider } from './components/HrrTransfer';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { ColorModeScript } from '@chakra-ui/react';
 import theme from './theme';
 
-const APP_VERSION = '1.3.2';
+const APP_VERSION = '1.5.0';
 
 // MainApp component contains all calculator functionality and the main interface
 const MainApp = () => {
@@ -20,6 +21,9 @@ const MainApp = () => {
   const { colorMode, toggleColorMode } = Chakra.useColorMode();
   const bgColor = Chakra.useColorModeValue('gray.50', 'gray.800');
   const borderColor = Chakra.useColorModeValue('gray.200', 'gray.600');
+  // Controlled so a calculator can send its HRR to another tab.
+  // keepMounted: a calculator keeps its inputs and results when you switch tabs.
+  const [tabIndex, setTabIndex] = useState(0);
 
   // Add PWA update handling
   const {
@@ -97,7 +101,8 @@ const MainApp = () => {
         </Chakra.VStack>
 
         {/* Main calculator interface with tabs */}
-        <Chakra.Tabs variant="enclosed" borderColor={borderColor} isLazy>
+        <HrrTransferProvider onNavigate={setTabIndex}>
+        <Chakra.Tabs variant="enclosed" borderColor={borderColor} isLazy lazyBehavior="keepMounted" index={tabIndex} onChange={setTabIndex}>
           <Chakra.TabList overflowX="auto" overflowY="hidden" sx={{ scrollbarWidth: 'thin', '&::-webkit-scrollbar': { height: '4px' } }}>
             <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Heat Release Rate</Chakra.Tab>
             <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Flame Height</Chakra.Tab>
@@ -126,7 +131,7 @@ const MainApp = () => {
               <Chakra.VStack spacing={4} align="stretch">
                 <Chakra.Heading size="md">Flame Height Calculator</Chakra.Heading>
                 <Chakra.Text color="gray.600" fontSize="sm">
-                  Calculates flame height using Heskestad's Correlation. Use for a single fuel item or package.
+                  Calculates flame height for a fire in the middle of a room (Heskestad), against a wall, or in a corner (NUREG-1805). Use for a single fuel item or package.
                   DO NOT USE IN A ROOM THAT HAS BEEN THROUGH FLASHOVER OR FULL INVOLVEMENT!
                                   </Chakra.Text>
                 <Chakra.Center py={4}>
@@ -188,6 +193,7 @@ const MainApp = () => {
             </Chakra.TabPanel>
           </Chakra.TabPanels>
         </Chakra.Tabs>
+        </HrrTransferProvider>
       </Chakra.Container>
     </Chakra.Box>
   );

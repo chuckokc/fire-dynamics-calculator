@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
 import { FIRE_LOCATIONS, solveFlameHeight } from '../../calculations/flameHeight.js';
-import { DEFAULT_UNITS, convertInput } from '../../calculations/units.js';
+import { DEFAULT_UNITS, convertInput, toSI, fromSI } from '../../calculations/units.js';
+import { fmt } from '../../calculations/work.js';
+import ShowWork from '../ShowWork';
+import { SendHRRMenu, useIncomingHRR } from '../HrrTransfer';
 
 // Visual Flame Height Indicator Component
-const FlameHeightVisual = ({ flameHeight, units }) => {
+// eslint-disable-next-line react/prop-types
+const FlameHeightVisual = ({ flameHeight, units, ceilingM }) => {
   // Add this at the beginning of the component
   const bgColor = Chakra.useColorModeValue('gray.50', 'gray.700');
   const boxBgColor = Chakra.useColorModeValue('white', 'gray.800');
@@ -28,7 +32,7 @@ const FlameHeightVisual = ({ flameHeight, units }) => {
     },
     { 
       name: 'Ceiling', 
-      heightM: 2.4, 
+      heightM: ceilingM > 0 ? Math.min(ceilingM, 10) : 2.4, 
       color: 'orange.600', 
       labelSide: 'left',
       labelBelow: false,
@@ -160,6 +164,7 @@ const FlameHeightCalculator = () => {
   const [diameter, setDiameter] = useState(''); // fire diameter (middle) or length along wall (wall)
   const [flameHeight, setFlameHeight] = useState('');
   const [fireLocation, setFireLocation] = useState('center');
+  const [ceilingHeight, setCeilingHeight] = useState(''); // optional
   const [units, setUnits] = useState(DEFAULT_UNITS);
   const [calculateMode, setCalculateMode] = useState('flameHeight'); // What to calculate
   const [result, setResult] = useState(null);
@@ -168,6 +173,12 @@ const FlameHeightCalculator = () => {
   const [showHistory, setShowHistory] = useState(false);
 
   const location = FIRE_LOCATIONS[fireLocation];
+
+  // HRR sent from another calculator: solve for flame height with it
+  useIncomingHRR('flameHeight', (kW) => {
+    setCalculateMode('flameHeight');
+    setHeatRelease(fromSI(kW, 'hrr', units).toFixed(2));
+  });
 
   // Corner flame height doesn't depend on fire size, so there is nothing
   // to solve for in "size" mode; fall back to flame height.
@@ -267,6 +278,7 @@ const FlameHeightCalculator = () => {
     setHeatRelease(prev => convertInput(prev, 'hrr', toImperial));
     setDiameter(prev => convertInput(prev, 'length', toImperial));
     setFlameHeight(prev => convertInput(prev, 'length', toImperial));
+    setCeilingHeight(prev => convertInput(prev, 'length', toImperial));
     setUnits(newUnits);
   };
 
@@ -378,6 +390,22 @@ const FlameHeightCalculator = () => {
             </Chakra.NumberInput>
             <Chakra.Text fontSize="sm" color="gray.600">
               {units === 'SI' ? 'm' : 'ft'}
+            </Chakra.Text>
+          </Chakra.FormControl>
+        )}
+
+        {calculateMode === 'flameHeight' && (
+          <Chakra.FormControl>
+            <Chakra.FormLabel>Ceiling Height Above the Fire (optional)</Chakra.FormLabel>
+            <Chakra.NumberInput
+              value={ceilingHeight}
+              onChange={(vs) => setCeilingHeight(vs)}
+              min={0}
+            >
+              <Chakra.NumberInputField inputMode="decimal" />
+            </Chakra.NumberInput>
+            <Chakra.Text fontSize="sm" color="gray.600">
+              {units === 'SI' ? 'm' : 'ft'}, from the base of the fire to the ceiling. Checks whether the flames reach it.
             </Chakra.Text>
           </Chakra.FormControl>
         )}
@@ -519,11 +547,43 @@ const FlameHeightCalculator = () => {
     </Chakra.Alert>
   )
 )}
+        {/* Ceiling check (NFPA 921 5.6.4.7) */}
+        {(() => {
+          const ceilingM = toSI(parseFloat(ceilingHeight), 'length', units);
+          if (calculateMode !== 'flameHeight' || !result || result.error || !(result.flameHeightM > 0) || !(ceilingM > 0)) return null;
+          const unit = units === 'SI' ? 'm' : 'ft';
+          const gap = fromSI(Math.abs(ceilingM - result.flameHeightM), 'length', units);
+          return result.flameHeightM >= ceilingM ? (
+            <Chakra.Alert status="warning" alignItems="flex-start">
+              <Chakra.AlertIcon />
+              <Chakra.Box>
+                <Chakra.AlertTitle>Flames reach the ceiling</Chakra.AlertTitle>
+                <Chakra.AlertDescription fontSize="sm">
+                  The free flame height is {fmt(gap, 3)} {unit} taller than the ceiling. NFPA 921 (2024) 5.6.4.7: flames taller than
+                  the ceiling spread out along it, and the total flame length (ceiling height plus the extension along the
+                  ceiling) is generally longer than the free flame height. Look for ceiling damage that extends out from above the fire.
+                </Chakra.AlertDescription>
+              </Chakra.Box>
+            </Chakra.Alert>
+          ) : (
+            <Chakra.Alert status="info">
+              <Chakra.AlertIcon />
+              <Chakra.Text fontSize="sm">The flame tip is {fmt(gap, 3)} {unit} below the ceiling.</Chakra.Text>
+            </Chakra.Alert>
+          );
+        })()}
+        {calculateMode === 'heatRelease' && result && !result.error && (
+        <Chakra.Flex justify="flex-end">
+          <SendHRRMenu kW={result.kW} from="Flame Height" exclude="flameHeight" />
+        </Chakra.Flex>
+        )}
+        {result && !result.error && <ShowWork steps={result.steps} />}
  {/* Visual Flame Height Indicator */}
         {calculateMode === 'flameHeight' && result && !result.error && result.value > 0 && (
           <FlameHeightVisual 
             flameHeight={result.value} 
             units={units} 
+            ceilingM={toSI(parseFloat(ceilingHeight), 'length', units)}
           />
         )}
       </Chakra.VStack>

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
 import { alphaSI, solveTSquared } from '../../calculations/tSquared.js';
-import { DEFAULT_UNITS, convertInput } from '../../calculations/units.js';
+import { DEFAULT_UNITS, convertInput, fromSI } from '../../calculations/units.js';
+import ShowWork from '../ShowWork';
+import { SendHRRMenu, useIncomingHRR } from '../HrrTransfer';
 
 // T-Squared Growth Curve Visual Component
 const TSquaredVisual = ({ time, heatRelease, growthRate, calculateMode, units, customAlpha }) => {
@@ -387,11 +389,18 @@ const TSquaredCalculator = () => {
       alpha,
       t: parseFloat(time),
       Q: parseFloat(heatRelease),
-      units
+      units,
+      customAlphaEntered: growthRate === 'custom' ? customAlpha : undefined
     });
     if (!r) return;
     setResult(r);
   };
+
+  // HRR sent from another calculator: how long until the fire grows to it?
+  useIncomingHRR('tSquared', (kW) => {
+    setCalculateMode('time');
+    setHeatRelease(fromSI(kW, 'hrr', units).toFixed(2));
+  });
 
   const copyResults = () => {
     if (!result || result.error) return;
@@ -711,6 +720,12 @@ const TSquaredCalculator = () => {
             </Chakra.Alert>
           )
         )}
+        {calculateMode === 'heatRelease' && result && !result.error && (
+        <Chakra.Flex justify="flex-end">
+          <SendHRRMenu kW={result.kW} from="T-Squared Growth" exclude="tSquared" />
+        </Chakra.Flex>
+        )}
+        {result && !result.error && <ShowWork steps={result.steps} />}
 
         {/* T-Squared Growth Curves Visual */}
         <TSquaredVisual 
