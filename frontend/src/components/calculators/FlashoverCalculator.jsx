@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
-import { MATERIALS, flashoverHRR } from '../../calculations/flashover.js';
-import { DEFAULT_UNITS, convertInput } from '../../calculations/units.js';
+import { MATERIALS, flashoverHRR, compareFire } from '../../calculations/flashover.js';
+import { DEFAULT_UNITS, convertInput, toSI, fromSI } from '../../calculations/units.js';
+import { fmt } from '../../calculations/work.js';
+import ShowWork from '../ShowWork';
+import { useIncomingHRR } from '../HrrTransfer';
 
 const FlashoverCalculator = () => {
   // State declarations
@@ -11,6 +14,7 @@ const FlashoverCalculator = () => {
   const [openingHeight, setOpeningHeight] = useState('');
   const [openingWidth, setOpeningWidth] = useState('');
   const [surfaceMaterial, setSurfaceMaterial] = useState('gypsum');
+  const [compareHRR, setCompareHRR] = useState(''); // optional fire to compare
   const [units, setUnits] = useState(DEFAULT_UNITS);
   const [results, setResults] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -68,8 +72,13 @@ const FlashoverCalculator = () => {
       material: surfaceMaterial,
       units
     });
-    setResults(r ? { mqh: r.mqh, thomas: r.thomas, babrauskas: r.babrauskas, kW: r.kW } : null);
+    setResults(r ? { mqh: r.mqh, thomas: r.thomas, babrauskas: r.babrauskas, kW: r.kW, steps: r.steps } : null);
   };
+
+  // HRR sent from another calculator: compare that fire with this room
+  useIncomingHRR('flashover', (kW) => {
+    setCompareHRR(fromSI(kW, 'hrr', units).toFixed(2));
+  });
 
   // Switching units converts what's already entered
   const handleUnitsChange = (newUnits) => {
@@ -80,6 +89,7 @@ const FlashoverCalculator = () => {
     setRoomLength(prev => convertInput(prev, 'length', toImperial));
     setOpeningHeight(prev => convertInput(prev, 'length', toImperial));
     setOpeningWidth(prev => convertInput(prev, 'length', toImperial));
+    setCompareHRR(prev => convertInput(prev, 'hrr', toImperial));
     setUnits(newUnits);
   };
 
@@ -244,6 +254,16 @@ const FlashoverCalculator = () => {
           </Chakra.VStack>
         </Chakra.FormControl>
 
+        <Chakra.FormControl>
+          <Chakra.FormLabel>Compare a Fire (optional)</Chakra.FormLabel>
+          <Chakra.NumberInput value={compareHRR} onChange={(vs) => setCompareHRR(vs)} min={0}>
+            <Chakra.NumberInputField inputMode="decimal" />
+          </Chakra.NumberInput>
+          <Chakra.Text fontSize="sm" color="gray.600">
+            {units === 'SI' ? 'kW' : 'BTU/s'}, the heat release rate of a fire in this room. Shows whether it reaches each flashover estimate.
+          </Chakra.Text>
+        </Chakra.FormControl>
+
         {/* Add history toggle button */}
         {calculationHistory.length > 0 && (
           <Chakra.Button
@@ -376,6 +396,29 @@ const FlashoverCalculator = () => {
     </Chakra.VStack>
   </Chakra.Alert>
 )}
+        {results && parseFloat(compareHRR) > 0 && (() => {
+          const fireKW = toSI(parseFloat(compareHRR), 'hrr', units);
+          const cmp = compareFire(fireKW, results.kW);
+          const names = { mqh: 'MQH', babrauskas: 'Babrauskas', thomas: 'Thomas' };
+          const reached = Object.keys(names).filter((k) => cmp[k]).map((k) => names[k]);
+          const fire = units === 'SI' ? `${fmt(fireKW)} kW` : `${fmt(parseFloat(compareHRR))} BTU/s (${fmt(fireKW)} kW)`;
+          const status = cmp.count === 3 ? 'error' : cmp.count > 0 ? 'warning' : 'success';
+          const message = cmp.count === 3
+            ? 'It reaches all three flashover estimates, so flashover of this room is likely.'
+            : cmp.count === 0
+              ? 'It is below all three flashover estimates, so this fire alone is unlikely to flash over this room.'
+              : `It reaches the ${reached.join(' and ')} estimate${reached.length > 1 ? 's' : ''} but not the others. The methods disagree, so treat flashover as possible.`;
+          return (
+            <Chakra.Alert status={status} alignItems="flex-start">
+              <Chakra.AlertIcon />
+              <Chakra.Box>
+                <Chakra.AlertTitle>A {fire} fire in this room</Chakra.AlertTitle>
+                <Chakra.AlertDescription fontSize="sm">{message}</Chakra.AlertDescription>
+              </Chakra.Box>
+            </Chakra.Alert>
+          );
+        })()}
+        {results && <ShowWork steps={results.steps} />}
       </Chakra.VStack>
     </Chakra.Box>
   );

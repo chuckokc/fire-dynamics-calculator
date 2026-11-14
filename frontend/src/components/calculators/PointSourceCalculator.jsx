@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
 import { pointSourceFlux, pointSourceFluxSI, radiusForFluxSI } from '../../calculations/pointSource.js';
-import { DEFAULT_UNITS, convertInput, toSI } from '../../calculations/units.js';
+import { DEFAULT_UNITS, convertInput, toSI, fromSI } from '../../calculations/units.js';
+import ShowWork from '../ShowWork';
+import { useIncomingHRR } from '../HrrTransfer';
 
 // Radiation Zone Visual Component
 const RadiationZoneVisual = ({ heatRelease, distance, radiativeFraction, units }) => {
@@ -202,6 +204,11 @@ const PointSourceCalculator = () => {
   const [units, setUnits] = useState(DEFAULT_UNITS);
   const [result, setResult] = useState(null);
   const [resultKW, setResultKW] = useState(null);
+  const [resultSteps, setResultSteps] = useState(null);
+  // Distance can be entered from the center of the fire, or from its edge plus the fire diameter
+  const [distanceMode, setDistanceMode] = useState('center');
+  const [edgeDistance, setEdgeDistance] = useState('');
+  const [fireDiameter, setFireDiameter] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
   // Add these new states for calculation history
   const [calculationHistory, setCalculationHistory] = useState([]);
@@ -263,7 +270,7 @@ const PointSourceCalculator = () => {
       id: Date.now(),
       timestamp: new Date().toLocaleString(),
       heatRelease: heatRelease,
-      distance: distance,
+      distance: effectiveDistance,
       radiativeFraction: radiativeFraction,
       units: units,
       result: result,
@@ -285,16 +292,27 @@ const PointSourceCalculator = () => {
   };
 
   // Calculation function
+  // Center distance in display units: R = L + D/2 when measured from the edge
+  const effectiveDistance = distanceMode === 'edge'
+    ? (parseFloat(edgeDistance) >= 0 && parseFloat(fireDiameter) > 0
+      ? (parseFloat(edgeDistance) + parseFloat(fireDiameter) / 2).toFixed(2)
+      : '')
+    : distance;
+
+  // HRR sent from another calculator
+  useIncomingHRR('pointSource', (kW) => {
+    setHeatRelease(fromSI(kW, 'hrr', units).toFixed(2));
+  });
+
   const calculateHeatFlux = () => {
-    const r = pointSourceFlux({
-      Q: parseFloat(heatRelease),
-      R: parseFloat(distance),
-      chi: parseFloat(radiativeFraction),
-      units
-    });
+    const common = { Q: parseFloat(heatRelease), chi: parseFloat(radiativeFraction), units };
+    const r = distanceMode === 'edge'
+      ? pointSourceFlux({ ...common, edgeDistance: parseFloat(edgeDistance), diameter: parseFloat(fireDiameter) })
+      : pointSourceFlux({ ...common, R: parseFloat(distance) });
     if (!r) return;
     setResult(r.value);
     setResultKW(r.kWm2);
+    setResultSteps(r.steps);
   };
 
   // Switching units converts what's already entered
@@ -303,6 +321,8 @@ const PointSourceCalculator = () => {
     const toImperial = newUnits === 'imperial';
     setHeatRelease(prev => convertInput(prev, 'hrr', toImperial));
     setDistance(prev => convertInput(prev, 'length', toImperial));
+    setEdgeDistance(prev => convertInput(prev, 'length', toImperial));
+    setFireDiameter(prev => convertInput(prev, 'length', toImperial));
     setUnits(newUnits);
   };
 
@@ -316,7 +336,7 @@ const PointSourceCalculator = () => {
     copyText += `- Radiative Heat Flux: ${result.toFixed(2)} ${units === 'SI' ? 'kW/m²' : `BTU/ft²/s (${resultKW.toFixed(2)} kW/m²)`}\n\n`;
     copyText += `Input Parameters:\n`;
     copyText += `- Heat Release Rate: ${heatRelease} ${units === 'SI' ? 'kW' : 'BTU/s'}\n`;
-    copyText += `- Distance: ${distance} ${units === 'SI' ? 'm' : 'ft'}\n`;
+    copyText += `- Distance from fire center: ${effectiveDistance} ${units === 'SI' ? 'm' : 'ft'}\n`;
     copyText += `- Radiative Fraction: ${radiativeFraction} (${(parseFloat(radiativeFraction) * 100).toFixed(0)}%)\n`;
     
     navigator.clipboard.writeText(copyText).then(() => {
@@ -326,10 +346,10 @@ const PointSourceCalculator = () => {
   };
 
   useEffect(() => {
-    if (heatRelease && distance && radiativeFraction) {
+    if (heatRelease && effectiveDistance && radiativeFraction) {
       calculateHeatFlux();
     }
-  }, [heatRelease, distance, radiativeFraction, units]);
+  }, [heatRelease, distance, radiativeFraction, units, distanceMode, edgeDistance, fireDiameter]);
 
   const getHeatFluxStatus = (criticalValue) => {
     if (!result) return 'gray';
@@ -378,7 +398,18 @@ const PointSourceCalculator = () => {
           </Chakra.Text>
         </Chakra.FormControl>
 
-        <Chakra.FormControl isRequired>
+        <Chakra.FormControl>
+          <Chakra.FormLabel>Measure Distance From</Chakra.FormLabel>
+          <Chakra.RadioGroup value={distanceMode} onChange={setDistanceMode}>
+            <Chakra.HStack spacing={4} flexWrap="wrap">
+              <Chakra.Radio value="center">Center of the fire</Chakra.Radio>
+              <Chakra.Radio value="edge">Edge of the fire</Chakra.Radio>
+            </Chakra.HStack>
+          </Chakra.RadioGroup>
+        </Chakra.FormControl>
+
+        {distanceMode === 'center' ? (
+          <Chakra.FormControl isRequired>
           <Chakra.FormLabel>Distance to Target</Chakra.FormLabel>
           <Chakra.NumberInput
             value={distance}
@@ -391,6 +422,29 @@ const PointSourceCalculator = () => {
             {units === 'SI' ? 'm' : 'ft'}, measured from the center of the fire (edge distance + ½ fire diameter)
           </Chakra.Text>
         </Chakra.FormControl>
+        ) : (
+          <Chakra.SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
+            <Chakra.FormControl isRequired>
+              <Chakra.FormLabel>Distance from Fire Edge (L)</Chakra.FormLabel>
+              <Chakra.NumberInput value={edgeDistance} onChange={(vs) => setEdgeDistance(vs)} min={0}>
+                <Chakra.NumberInputField inputMode="decimal" />
+              </Chakra.NumberInput>
+              <Chakra.Text fontSize="sm" color="gray.600">{units === 'SI' ? 'm' : 'ft'}</Chakra.Text>
+            </Chakra.FormControl>
+            <Chakra.FormControl isRequired>
+              <Chakra.FormLabel>Fire Diameter (D)</Chakra.FormLabel>
+              <Chakra.NumberInput value={fireDiameter} onChange={(vs) => setFireDiameter(vs)} min={0}>
+                <Chakra.NumberInputField inputMode="decimal" />
+              </Chakra.NumberInput>
+              <Chakra.Text fontSize="sm" color="gray.600">{units === 'SI' ? 'm' : 'ft'}</Chakra.Text>
+            </Chakra.FormControl>
+            {effectiveDistance && (
+              <Chakra.Text fontSize="sm" color="gray.600" gridColumn={{ sm: 'span 2' }}>
+                R = L + D/2 = {effectiveDistance} {units === 'SI' ? 'm' : 'ft'} from the center of the fire
+              </Chakra.Text>
+            )}
+          </Chakra.SimpleGrid>
+        )}
 
         <Chakra.FormControl>
           <Chakra.FormLabel>Radiative Fraction</Chakra.FormLabel>
@@ -507,7 +561,7 @@ const PointSourceCalculator = () => {
         <Chakra.Button
           colorScheme="blue"
           onClick={calculateHeatFlux}
-          isDisabled={!heatRelease || !distance || !radiativeFraction}
+          isDisabled={!heatRelease || !effectiveDistance || !radiativeFraction}
         >
           Calculate Heat Flux
         </Chakra.Button>
@@ -526,7 +580,7 @@ const PointSourceCalculator = () => {
                     <br />
                     Heat Release Rate: {heatRelease} {units === 'SI' ? 'kW' : 'BTU/s'}
                     <br />
-                    Distance: {distance} {units === 'SI' ? 'm' : 'ft'}
+                    Distance from fire center: {effectiveDistance} {units === 'SI' ? 'm' : 'ft'}
                     <br />
                     Radiative Fraction: {radiativeFraction} ({(parseFloat(radiativeFraction) * 100).toFixed(0)}%)
                   </Chakra.Text>
@@ -549,6 +603,7 @@ const PointSourceCalculator = () => {
                 </Chakra.Button>
               </Chakra.VStack>
             </Chakra.Alert>
+            <Chakra.Box width="100%"><ShowWork steps={resultSteps} /></Chakra.Box>
 
             <Chakra.Card width="100%">
               <Chakra.CardHeader>
@@ -579,7 +634,7 @@ const PointSourceCalculator = () => {
             {/* Radiation Zone Visual */}
             <RadiationZoneVisual 
               heatRelease={heatRelease}
-              distance={distance}
+              distance={effectiveDistance}
               radiativeFraction={radiativeFraction}
               units={units}
             />

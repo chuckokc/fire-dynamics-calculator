@@ -9,6 +9,12 @@ Calculators: Heat Release Rate, Flame Height (middle of room / wall /
 corner), Point Source Radiation, Flashover (MQH, Babrauskas, Thomas) and
 T-Squared growth, plus a Reference Data tab.
 
+Classroom features: a "Show the work" panel on every calculator (equations
+with the numbers substituted), a lab helper that turns a measured burn into
+a mass flux, "Use this HRR in…" to carry a result between calculators, a
+flashover comparison for a given fire, point source distance from the
+fire's edge (R = L + D/2), and a check for flames reaching the ceiling.
+
 ## Where the math lives
 
 All equations, material tables and unit conversions are in

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
-import { MATERIAL_PROPERTIES, heatReleaseRate } from '../../calculations/hrr.js';
+import { MATERIAL_PROPERTIES, heatReleaseRate, labMassFlux } from '../../calculations/hrr.js';
+import ShowWork from '../ShowWork';
+import { SendHRRMenu } from '../HrrTransfer';
 import { DEFAULT_UNITS, convertInput } from '../../calculations/units.js';
 
 const HeatReleaseCalculator = () => {
@@ -11,6 +13,13 @@ const HeatReleaseCalculator = () => {
   const [manualMassFlux, setManualMassFlux] = useState('');
   const [result, setResult] = useState(null);
   const [resultKW, setResultKW] = useState(null);
+  const [resultSteps, setResultSteps] = useState(null);
+  // Lab helper: work out mass flux from a burn
+  const [showLab, setShowLab] = useState(false);
+  const [labStart, setLabStart] = useState('');
+  const [labEnd, setLabEnd] = useState('');
+  const [labTime, setLabTime] = useState('');
+  const [labArea, setLabArea] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
   // Add this new state for calculation history
   const [calculationHistory, setCalculationHistory] = useState([]);
@@ -76,12 +85,32 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
     if (!r) return;
     setResult(r.value);
     setResultKW(r.kW);
+    setResultSteps(r.steps);
   };
+
+  const lab = labMassFlux({
+    initialMass: parseFloat(labStart),
+    finalMass: parseFloat(labEnd),
+    time: parseFloat(labTime),
+    area: parseFloat(labArea),
+    units
+  });
+
+  const labField = (label, value, setValue, unit) => (
+    <Chakra.FormControl>
+      <Chakra.FormLabel fontSize="sm">{label}</Chakra.FormLabel>
+      <Chakra.NumberInput size="sm" value={value} onChange={(vs) => setValue(vs)} min={0}>
+        <Chakra.NumberInputField inputMode="decimal" />
+      </Chakra.NumberInput>
+      <Chakra.Text fontSize="xs" color="gray.600">{unit}</Chakra.Text>
+    </Chakra.FormControl>
+  );
 
   // Switching units converts what's already entered (mass flux is always g/m²-s)
   const handleUnitsChange = (newUnits) => {
     if (newUnits === units) return;
     setBurningArea(prev => convertInput(prev, 'area', newUnits === 'imperial'));
+    setLabArea(prev => convertInput(prev, 'area', newUnits === 'imperial', 4));
     setUnits(newUnits);
   };
 
@@ -180,6 +209,41 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
     <Chakra.Text fontSize="sm" color="gray.600">g/m²-s</Chakra.Text>
   </Chakra.FormControl>
 ) : null}
+
+        {needsMassFluxInput && (
+          <Chakra.Box borderWidth="1px" borderRadius="md" p={3}>
+            <Chakra.Button size="sm" variant="link" colorScheme="blue" onClick={() => setShowLab(!showLab)}>
+              {showLab ? 'Hide lab helper' : 'Calculate mass flux from a lab burn'}
+            </Chakra.Button>
+            {showLab && (
+              <Chakra.VStack align="stretch" spacing={3} mt={3}>
+                <Chakra.Text fontSize="sm" color="gray.600">
+                  Weigh the sample before and after burning, time the burn, and measure the burning surface.
+                </Chakra.Text>
+                <Chakra.SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
+                  {labField('Starting mass', labStart, setLabStart, 'g')}
+                  {labField('Ending mass', labEnd, setLabEnd, 'g')}
+                  {labField('Burn time', labTime, setLabTime, 'seconds')}
+                  {labField('Sample burning area', labArea, setLabArea, units === 'SI' ? 'm²' : 'ft²')}
+                </Chakra.SimpleGrid>
+                {lab?.error && (
+                  <Chakra.Alert status="warning" size="sm"><Chakra.AlertIcon />{lab.error}</Chakra.Alert>
+                )}
+                {lab?.massFlux > 0 && (
+                  <>
+                    <Chakra.HStack justify="space-between" flexWrap="wrap" gap={2}>
+                      <Chakra.Text fontWeight="bold">ṁ″ = {lab.massFlux.toFixed(2)} g/m²-s</Chakra.Text>
+                      <Chakra.Button size="sm" colorScheme="blue" onClick={() => setManualMassFlux(lab.massFlux.toFixed(2))}>
+                        Use this mass flux
+                      </Chakra.Button>
+                    </Chakra.HStack>
+                    <ShowWork steps={lab.steps} title="Show the work (lab)" />
+                  </>
+                )}
+              </Chakra.VStack>
+            )}
+          </Chakra.Box>
+        )}
 
         <Chakra.FormControl isRequired>
           <Chakra.FormLabel>Burning Area</Chakra.FormLabel>
@@ -325,9 +389,11 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
       >
         Save to History
       </Chakra.Button>
+      <SendHRRMenu kW={resultKW} from="Heat Release Rate" />
     </Chakra.VStack>
   </Chakra.Alert>
 )}
+        {result && <ShowWork steps={resultSteps} />}
       </Chakra.VStack>
     </Chakra.Box>
   );

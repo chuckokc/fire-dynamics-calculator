@@ -8,11 +8,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { toSI, fromSI, convertInput, KW_TO_BTU_PER_S } from '../src/calculations/units.js';
-import { MATERIAL_PROPERTIES, heatReleaseRate } from '../src/calculations/hrr.js';
+import { MATERIAL_PROPERTIES, heatReleaseRate, labMassFlux } from '../src/calculations/hrr.js';
 import { solveFlameHeight } from '../src/calculations/flameHeight.js';
-import { pointSourceFlux } from '../src/calculations/pointSource.js';
+import { pointSourceFlux, centerDistance } from '../src/calculations/pointSource.js';
 import {
-  MATERIALS, T_CHAR_SEC, flashoverHRR, heatTransferCoefficient, mqhHRR
+  MATERIALS, T_CHAR_SEC, flashoverHRR, heatTransferCoefficient, mqhHRR, compareFire
 } from '../src/calculations/flashover.js';
 import { GROWTH_RATES, alphaSI, solveTSquared } from '../src/calculations/tSquared.js';
 
@@ -159,4 +159,48 @@ test('t-squared: custom α entered in BTU/s³ is converted (imperial)', () => {
   near(r.value, alphaBTU * 100 * 100, 1e-9, 'Q in BTU/s = α(BTU/s³) t²');
   const t = solveTSquared({ mode: 'time', alpha: a, Q: 1000, units: 'imperial' });
   near(t.value, Math.sqrt(1000 / alphaBTU), 1e-9, 'time to 1000 BTU/s');
+});
+
+// ---------------------------------------------------------------- classroom features
+test('point source: edge distance + diameter gives NUREG center distance (05.1 E108)', () => {
+  const D = 12.2131082303502;                         // E83 = √(4 × 117.15 / π)
+  near(centerDistance(29.87, D), 35.9765541151751, 1e-12, 'R = L + D/2 (E108)');
+  const r = pointSourceFlux({ Q: 527713.117489372, chi: 0.3, edgeDistance: 29.87, diameter: D });
+  near(r.R_m, 35.9765541151751, 1e-12, 'R used');
+  near(r.kWm2, 9.7335250964314, 1e-9, "q'' (C115)");
+  const ri = pointSourceFlux({ Q: 527713.117489372 * KW_TO_BTU_PER_S, chi: 0.3, edgeDistance: 29.87 / 0.3048, diameter: D / 0.3048, units: 'imperial' });
+  near(ri.kWm2, 9.7335250964314, 1e-9, "q'' from imperial edge inputs");
+  assert.ok(r.steps.some((st) => st.formula === 'R = L + D/2'), 'shows R = L + D/2 step');
+});
+
+test('lab helper: mass flux from a burn', () => {
+  const r = labMassFlux({ initialMass: 250, finalMass: 200, time: 100, area: 0.01 });
+  near(r.massFlux, 50, 1e-12, '50 g over 0.01 m² in 100 s');            // 50 / (0.01 × 100)
+  const ri = labMassFlux({ initialMass: 250, finalMass: 200, time: 100, area: 0.01 / 0.09290304, units: 'imperial' });
+  near(ri.massFlux, 50, 1e-9, 'same sample in ft²');
+  assert.ok(labMassFlux({ initialMass: 200, finalMass: 250, time: 100, area: 0.01 }).error, 'mass gain is an error');
+  assert.ok(labMassFlux({ initialMass: 250, finalMass: 200, time: 0, area: 0.01 }).error, 'zero time is an error');
+  assert.equal(labMassFlux({ initialMass: 250, finalMass: NaN, time: 100, area: 0.01 }), null, 'incomplete input');
+});
+
+test('flashover: compare a fire with the three estimates', () => {
+  const kW = { mqh: 1017, babrauskas: 1988, thomas: 1474 };
+  assert.deepEqual(compareFire(1500, kW), { mqh: true, babrauskas: false, thomas: true, count: 2 });
+  assert.equal(compareFire(500, kW).count, 0);
+  assert.equal(compareFire(2500, kW).count, 3);
+});
+
+test('show the work: steps end with the same answer', () => {
+  const hrr = heatReleaseRate({ massFlux: 55, heatOfCombustion: 43.7, area: 1 });
+  assert.equal(hrr.steps.at(-1).result, '2,404 kW');
+  const fo = flashoverHRR({ W: 30.48, L: 5.49, H: 3.048, wv: 0.914, hv: 2.44, material: 'concrete', units: 'SI' });
+  assert.equal(fo.steps.find((st) => st.label === 'Babrauskas').result, '2,613 kW');
+  assert.ok(fo.steps.some((st) => st.formula === 'A_T = 2(LW + LH + WH) − Aₒ'));
+  const fh = solveFlameHeight({ mode: 'flameHeight', location: 'wall', Q: 1525.16847167292, D: Math.sqrt(1.4) });
+  assert.equal(fh.steps.at(-1).result, '4.027 m');
+  const ft = solveFlameHeight({ mode: 'flameHeight', location: 'corner', Q: 948, units: 'imperial' });
+  assert.equal(ft.steps[0].label, 'Convert heat release rate to kW');
+  assert.match(ft.steps.at(-1).result, / ft$/);
+  const t2 = solveTSquared({ mode: 'heatRelease', alpha: 0.0469, t: 100 });
+  assert.equal(t2.steps.at(-1).result, '469 kW');
 });

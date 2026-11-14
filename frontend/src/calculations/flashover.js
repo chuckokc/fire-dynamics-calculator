@@ -1,6 +1,7 @@
 // Minimum HRR for compartment flashover (NUREG-1805 Ch. 13,
 // spreadsheet 13_Compartment_Flashover_Calculations): MQH, Babrauskas, Thomas.
-import { toSI, fromSI } from './units.js';
+import { toSI, fromSI, FT_TO_M, KW_TO_BTU_PER_S } from './units.js';
+import { fmt, step, conversionStep } from './work.js';
 
 // Material thermal properties (k in kW/m/K, ρ in kg/m³, c in kJ/kg/K)
 // Values from NUREG-1805 (Klote & Milke, Principles of Smoke Management,
@@ -71,8 +72,34 @@ export function flashoverHRR({ H, W, L, hv, wv, material, units = 'SI' }) {
     thomas: thomasHRR(AT, AO, ho),
     babrauskas: babrauskasHRR(AO, ho)
   };
+
+  const imperial = units === 'imperial';
+  const steps = [];
+  if (imperial) {
+    const names = ['room height', 'room width', 'room length', 'opening height', 'opening width'];
+    [H, W, L, hv, wv].forEach((v, i) =>
+      steps.push(conversionStep(`Convert ${names[i]} to m`, v, 'ft', FT_TO_M, '0.3048', 'm')));
+  }
+  const sqrtHo = Math.sqrt(ho);
+  steps.push(step('Opening area', 'Aₒ = wₒ × hₒ', `${fmt(wo)} × ${fmt(ho)}`, `${fmt(AO)} m²`));
+  steps.push(step('Total area of walls, ceiling and floor, minus the opening', 'A_T = 2(LW + LH + WH) − Aₒ',
+    `2(${fmt(l)}×${fmt(w)} + ${fmt(l)}×${fmt(h)} + ${fmt(w)}×${fmt(h)}) − ${fmt(AO)}`, `${fmt(AT)} m²`));
+  steps.push(step(`Wall heat transfer coefficient (${mat.name}, t = ${T_CHAR_SEC} s)`, 'h_k = √(kρc / t)',
+    `√(${mat.k} × ${mat.ρ} × ${mat.c} / ${T_CHAR_SEC})`, `${fmt(hk)} kW/m²·K`));
+  steps.push(step('MQH', 'Q̇fo = 610 √(h_k A_T Aₒ √hₒ)',
+    `610 × √(${fmt(hk)} × ${fmt(AT)} × ${fmt(AO)} × ${fmt(sqrtHo)})`, `${fmt(kW.mqh)} kW`));
+  steps.push(step('Babrauskas', 'Q̇fo = 750 Aₒ √hₒ', `750 × ${fmt(AO)} × ${fmt(sqrtHo)}`, `${fmt(kW.babrauskas)} kW`));
+  steps.push(step('Thomas', 'Q̇fo = 7.8 A_T + 378 Aₒ √hₒ',
+    `7.8 × ${fmt(AT)} + 378 × ${fmt(AO)} × ${fmt(sqrtHo)}`, `${fmt(kW.thomas)} kW`));
+  if (imperial) {
+    steps.push(step('Convert to BTU/s', 'BTU/s = kW × 0.9478',
+      `${fmt(kW.mqh)}, ${fmt(kW.babrauskas)}, ${fmt(kW.thomas)} × 0.9478`,
+      `${fmt(kW.mqh * KW_TO_BTU_PER_S)}, ${fmt(kW.babrauskas * KW_TO_BTU_PER_S)}, ${fmt(kW.thomas * KW_TO_BTU_PER_S)} BTU/s`));
+  }
+
   return {
     kW,
+    steps,
     mqh: fromSI(kW.mqh, 'hrr', units),
     thomas: fromSI(kW.thomas, 'hrr', units),
     babrauskas: fromSI(kW.babrauskas, 'hrr', units),
@@ -80,4 +107,19 @@ export function flashoverHRR({ H, W, L, hv, wv, material, units = 'SI' }) {
     AT,
     AO
   };
+}
+
+/**
+ * Compare a fire's HRR (kW) with each flashover estimate (kW).
+ * @returns {{mqh: boolean, babrauskas: boolean, thomas: boolean, count: number}}
+ *   true = the fire reaches or exceeds that estimate
+ */
+export function compareFire(fireKW, kW) {
+  const out = {
+    mqh: fireKW >= kW.mqh,
+    babrauskas: fireKW >= kW.babrauskas,
+    thomas: fireKW >= kW.thomas
+  };
+  out.count = [out.mqh, out.babrauskas, out.thomas].filter(Boolean).length;
+  return out;
 }
