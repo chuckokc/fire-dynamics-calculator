@@ -215,7 +215,7 @@ const FlashoverCalculator = () => {
               HO = Height of ventilation opening
             </Chakra.Text>
             <Chakra.Text fontSize="sm" color="gray.600" mt={3} fontStyle="italic">
-              Note: h_k assumes t = 600 s after ignition, a typical time to flashover. This simplification is used here so no wall thickness is needed; it is not the NUREG-1805 method. NUREG's spreadsheet uses h_k = k/δ (walls heated all the way through), which usually gives a lower MQH value.
+              Note: h_k assumes t = 600 s after ignition, a typical time to flashover. This simplification is used here so no wall thickness is needed; it is not the NUREG-1805 method. The NUREG spreadsheet uses h_k = k/δ (walls heated all the way through), which usually gives a lower MQH value.
             </Chakra.Text>
           </Chakra.CardBody>
         </Chakra.Card>
