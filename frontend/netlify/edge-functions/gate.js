@@ -1,6 +1,9 @@
 /* global Netlify */
 // Sits in front of the whole site. Without a valid access cookie, no app file
 // is served. See lib/access.js for how it works.
+// The code comes from the ACCESS_CODE environment variable (set in Netlify,
+// not in this repo). Netlify reads it at build time, so after changing it,
+// trigger a new deploy.
 import { handleGate } from './lib/access.js';
 
 export default async (request, context) =>
