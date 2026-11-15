@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import * as Chakra from '@chakra-ui/react';
 import { ArrowRight } from 'lucide-react';
+import { RESULT_BUTTON } from '../resultButtons';
 
 // Lets one calculator hand its heat release rate to another, so students can
 // work a whole scenario (fire size -> flame height -> radiant heat -> flashover)
@@ -63,7 +64,7 @@ export function SendHRRMenu({ kW, from, exclude }) {
   if (!ctx || !(kW > 0)) return null;
   return (
     <Chakra.Menu>
-      <Chakra.MenuButton as={Chakra.Button} size="sm" colorScheme="teal" rightIcon={<ArrowRight size={14} />}>
+      <Chakra.MenuButton as={Chakra.Button} {...RESULT_BUTTON} rightIcon={<ArrowRight size={14} />}>
         Use this HRR in…
       </Chakra.MenuButton>
       {/* Portal: render the list at the page level so the result box can't clip it */}

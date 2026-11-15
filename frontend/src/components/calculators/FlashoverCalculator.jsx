@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
 import EquationCard from '../EquationCard';
+import ResultCard from '../ResultCard';
 import { MATERIALS, flashoverHRR, compareFire } from '../../calculations/flashover.js';
 import { DEFAULT_UNITS, convertInput, toSI, fromSI } from '../../calculations/units.js';
 import { fmt } from '../../calculations/work.js';
@@ -120,6 +121,19 @@ const FlashoverCalculator = () => {
     }
   }, [roomHeight, roomWidth, roomLength, openingHeight, openingWidth, surfaceMaterial, units]);
 
+  // One length input with its unit under it. Used for the room and opening sizes.
+  const dimensionField = (label, value, setValue) => (
+    <Chakra.FormControl isRequired>
+      <Chakra.FormLabel>{label}</Chakra.FormLabel>
+      <Chakra.NumberInput value={value} onChange={(vs) => setValue(vs)} min={0}>
+        <Chakra.NumberInputField inputMode="decimal" />
+      </Chakra.NumberInput>
+      <Chakra.Text fontSize="sm" color="fd.muted">
+        {units === 'SI' ? 'm' : 'ft'}
+      </Chakra.Text>
+    </Chakra.FormControl>
+  );
+
   return (
     <Chakra.Box p={{ base: 4, sm: 6 }} maxW="2xl" mx="auto">
       <Chakra.VStack spacing={6} align="stretch">
@@ -155,75 +169,26 @@ const FlashoverCalculator = () => {
           </Chakra.Text>
         </EquationCard>
         
-        <Chakra.FormControl isRequired>
-          <Chakra.FormLabel>Room Height</Chakra.FormLabel>
-          <Chakra.NumberInput
-            value={roomHeight}
-            onChange={(vs) => setRoomHeight(vs)}
-            min={0}
-          >
-            <Chakra.NumberInputField inputMode="decimal" />
-          </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="fd.muted">
-            {units === 'SI' ? 'm' : 'ft'}
-          </Chakra.Text>
-        </Chakra.FormControl>
+        <Chakra.Box>
+          <Chakra.Heading as="h3" size="xs" textTransform="uppercase" letterSpacing="wider" color="fd.muted" mb={3}>
+            Room dimensions
+          </Chakra.Heading>
+          <Chakra.SimpleGrid columns={{ base: 2, sm: 3 }} spacing={4}>
+            {dimensionField('Room Height', roomHeight, setRoomHeight)}
+            {dimensionField('Room Width', roomWidth, setRoomWidth)}
+            {dimensionField('Room Length', roomLength, setRoomLength)}
+          </Chakra.SimpleGrid>
+        </Chakra.Box>
 
-        <Chakra.FormControl isRequired>
-          <Chakra.FormLabel>Room Width</Chakra.FormLabel>
-          <Chakra.NumberInput
-            value={roomWidth}
-            onChange={(vs) => setRoomWidth(vs)}
-            min={0}
-          >
-            <Chakra.NumberInputField inputMode="decimal" />
-          </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="fd.muted">
-            {units === 'SI' ? 'm' : 'ft'}
-          </Chakra.Text>
-        </Chakra.FormControl>
-
-        <Chakra.FormControl isRequired>
-          <Chakra.FormLabel>Room Length</Chakra.FormLabel>
-          <Chakra.NumberInput
-            value={roomLength}
-            onChange={(vs) => setRoomLength(vs)}
-            min={0}
-          >
-            <Chakra.NumberInputField inputMode="decimal" />
-          </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="fd.muted">
-            {units === 'SI' ? 'm' : 'ft'}
-          </Chakra.Text>
-        </Chakra.FormControl>
-
-        <Chakra.FormControl isRequired>
-          <Chakra.FormLabel>Opening Height</Chakra.FormLabel>
-          <Chakra.NumberInput
-            value={openingHeight}
-            onChange={(vs) => setOpeningHeight(vs)}
-            min={0}
-          >
-            <Chakra.NumberInputField inputMode="decimal" />
-          </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="fd.muted">
-            {units === 'SI' ? 'm' : 'ft'}
-          </Chakra.Text>
-        </Chakra.FormControl>
-
-        <Chakra.FormControl isRequired>
-          <Chakra.FormLabel>Opening Width</Chakra.FormLabel>
-          <Chakra.NumberInput
-            value={openingWidth}
-            onChange={(vs) => setOpeningWidth(vs)}
-            min={0}
-          >
-            <Chakra.NumberInputField inputMode="decimal" />
-          </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="fd.muted">
-            {units === 'SI' ? 'm' : 'ft'}
-          </Chakra.Text>
-        </Chakra.FormControl>
+        <Chakra.Box>
+          <Chakra.Heading as="h3" size="xs" textTransform="uppercase" letterSpacing="wider" color="fd.muted" mb={3}>
+            Ventilation opening
+          </Chakra.Heading>
+          <Chakra.SimpleGrid columns={{ base: 2, sm: 3 }} spacing={4}>
+            {dimensionField('Opening Height', openingHeight, setOpeningHeight)}
+            {dimensionField('Opening Width', openingWidth, setOpeningWidth)}
+          </Chakra.SimpleGrid>
+        </Chakra.Box>
 
         <Chakra.FormControl>
           <Chakra.FormLabel>Surface Material</Chakra.FormLabel>
@@ -364,40 +329,19 @@ const FlashoverCalculator = () => {
         </Chakra.Button>
 
         {results && (
-  <Chakra.Alert status="info">
-    <Chakra.AlertIcon />
-    <Chakra.Box flex="1">
-      <Chakra.VStack align="start" spacing={2} width="100%">
-        <Chakra.Text fontWeight="bold">Required Heat Release Rate for Flashover:</Chakra.Text>
-        <Chakra.Text>
-          MQH Correlation: {results.mqh.toFixed(0)} {units === 'SI' ? 'kW' : `BTU/s (${results.kW.mqh.toFixed(0)} kW)`}
-        </Chakra.Text>
-        <Chakra.Text>
-          Thomas Correlation: {results.thomas.toFixed(0)} {units === 'SI' ? 'kW' : `BTU/s (${results.kW.thomas.toFixed(0)} kW)`}
-        </Chakra.Text>
-        <Chakra.Text>
-          Babrauskas Correlation: {results.babrauskas.toFixed(0)} {units === 'SI' ? 'kW' : `BTU/s (${results.kW.babrauskas.toFixed(0)} kW)`}
-        </Chakra.Text>
-      </Chakra.VStack>
-    </Chakra.Box>
-    <Chakra.VStack>
-      <Chakra.Button
-        size="sm"
-        colorScheme={copySuccess ? "green" : "blue"}
-        onClick={copyResults}
-      >
-        {copySuccess ? "Copied!" : "Copy Results"}
-      </Chakra.Button>
-      <Chakra.Button
-        size="sm"
-        colorScheme="purple"
-        onClick={saveToHistory}
-      >
-        Save to History
-      </Chakra.Button>
-    </Chakra.VStack>
-  </Chakra.Alert>
-)}
+          <ResultCard
+            accent="blue.400"
+            title="Required Heat Release Rate for Flashover"
+            stats={[
+              { label: 'MQH', value: results.mqh.toFixed(0), unit: units === 'SI' ? 'kW' : 'BTU/s', note: units === 'SI' ? null : `(${results.kW.mqh.toFixed(0)} kW)` },
+              { label: 'Thomas', value: results.thomas.toFixed(0), unit: units === 'SI' ? 'kW' : 'BTU/s', note: units === 'SI' ? null : `(${results.kW.thomas.toFixed(0)} kW)` },
+              { label: 'Babrauskas', value: results.babrauskas.toFixed(0), unit: units === 'SI' ? 'kW' : 'BTU/s', note: units === 'SI' ? null : `(${results.kW.babrauskas.toFixed(0)} kW)` },
+            ]}
+            onCopy={copyResults}
+            copySuccess={copySuccess}
+            onSave={saveToHistory}
+          />
+        )}
         {results && parseFloat(compareHRR) > 0 && (() => {
           const fireKW = toSI(parseFloat(compareHRR), 'hrr', units);
           const cmp = compareFire(fireKW, results.kW);

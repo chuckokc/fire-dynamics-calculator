@@ -10,12 +10,13 @@ import ReferenceGuide from './components/reference/ReferenceGuide';
 import TSquaredCalculator from './components/calculators/TSquaredCalculator';
 import { HrrTransferProvider } from './components/HrrTransfer';
 import FeedbackModal from './components/FeedbackModal';
+import ScrollableTabList from './components/ScrollableTabList';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { ColorModeScript } from '@chakra-ui/react';
 import theme from './theme';
 import { checkAccess } from './accessCheck';
 
-const APP_VERSION = '1.8.0';
+const APP_VERSION = '1.9.0';
 
 // One column for every calculator, so the heading, description, warning and form
 // line up and the width does not change when you switch tabs. px matches the
@@ -126,18 +127,18 @@ const MainApp = () => {
         {/* Main calculator interface with tabs */}
         <HrrTransferProvider onNavigate={setTabIndex}>
         <Chakra.Tabs variant="enclosed" borderColor={borderColor} isLazy lazyBehavior="keepMounted" index={tabIndex} onChange={setTabIndex}>
-          <Chakra.TabList overflowX="auto" overflowY="hidden" sx={{ scrollbarWidth: 'thin', '&::-webkit-scrollbar': { height: '4px' } }}>
+          <ScrollableTabList>
             <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Heat Release Rate</Chakra.Tab>
             <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Flame Height</Chakra.Tab>
             <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Point Source Radiation</Chakra.Tab>
             <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Flashover</Chakra.Tab>
             <Chakra.Tab flexShrink={0} whiteSpace="nowrap">T-Squared Growth</Chakra.Tab>
             <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Reference Data</Chakra.Tab>
-          </Chakra.TabList>
+          </ScrollableTabList>
 
           <Chakra.TabPanels>
             {/* Heat Release Rate Calculator Panel */}
-            <Chakra.TabPanel>
+            <Chakra.TabPanel px={{ base: 0, sm: 4 }}>
               <CalculatorPanel
                 title="Heat Release Rate Calculator"
                 description="Calculates heat release rate using the Heat Release Rate Equation."
@@ -147,7 +148,7 @@ const MainApp = () => {
             </Chakra.TabPanel>
 
             {/* Flame Height Calculator Panel */}
-            <Chakra.TabPanel>
+            <Chakra.TabPanel px={{ base: 0, sm: 4 }}>
               <CalculatorPanel
                 title="Flame Height Calculator"
                 description="Calculates flame height for a fire in the middle of a room (Heskestad), against a wall, or in a corner (NUREG-1805). Use for a single fuel item or package."
@@ -161,7 +162,7 @@ const MainApp = () => {
             </Chakra.TabPanel>
 
             {/* Point Source Radiation Calculator Panel */}
-            <Chakra.TabPanel>
+            <Chakra.TabPanel px={{ base: 0, sm: 4 }}>
               <CalculatorPanel
                 title="Point Source Radiation Calculator"
                 description="Calculates radiative heat flux using the Point Source Radiation Model."
@@ -171,7 +172,7 @@ const MainApp = () => {
             </Chakra.TabPanel>
 
             {/* Flashover Calculator Panel */}
-            <Chakra.TabPanel>
+            <Chakra.TabPanel px={{ base: 0, sm: 4 }}>
               <CalculatorPanel
                 title="Flashover Calculator"
                 description="Estimate minimum heat release rate required for flashover using MQH, Babrauskas, and Thomas correlations."
@@ -181,7 +182,7 @@ const MainApp = () => {
             </Chakra.TabPanel>
 
             {/* T-Squared Growth Calculator Panel */}
-            <Chakra.TabPanel>
+            <Chakra.TabPanel px={{ base: 0, sm: 4 }}>
               <CalculatorPanel
                 title="T-Squared Fire Growth Calculator"
                 description="Calculate heat release rate over time using the t-squared fire growth model with standard growth rate coefficients (slow, medium, fast, ultra-fast)."

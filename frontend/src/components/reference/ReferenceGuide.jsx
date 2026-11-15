@@ -1,5 +1,6 @@
 import React from 'react';
 import * as Chakra from '@chakra-ui/react';
+import ScrollableTabList from '../ScrollableTabList';
 
 const ReferenceGuide = () => {
   // Defining table data
@@ -149,13 +150,13 @@ const ReferenceGuide = () => {
         </Chakra.Text>
 
         <Chakra.Tabs variant="enclosed">
-          <Chakra.TabList mb="1em" overflowX="auto" overflowY="hidden" sx={{ scrollbarWidth: 'thin', '&::-webkit-scrollbar': { height: '4px' } }}>
+          <ScrollableTabList mb="1em">
             <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Peak Heat Release Rates</Chakra.Tab>
             <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Steady State HRR</Chakra.Tab>
             <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Material Properties</Chakra.Tab>
             <Chakra.Tab flexShrink={0} whiteSpace="nowrap">Mass Flux Values</Chakra.Tab>
             <Chakra.Tab flexShrink={0} whiteSpace="nowrap">T-Squared Fire Growth</Chakra.Tab>
-          </Chakra.TabList>
+          </ScrollableTabList>
 
           <Chakra.TabPanels>
             {/* Peak Heat Release Rate Panel */}

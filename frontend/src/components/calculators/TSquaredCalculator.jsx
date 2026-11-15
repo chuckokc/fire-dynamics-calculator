@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
 import EquationCard from '../EquationCard';
+import ResultCard from '../ResultCard';
 import { alphaSI, solveTSquared } from '../../calculations/tSquared.js';
 import { DEFAULT_UNITS, convertInput, fromSI } from '../../calculations/units.js';
 import ShowWork from '../ShowWork';
@@ -670,58 +671,39 @@ const TSquaredCalculator = () => {
               <Chakra.Text>{result.error}</Chakra.Text>
             </Chakra.Alert>
           ) : result.value !== undefined && (
-            <Chakra.Alert status="success">
-              <Chakra.AlertIcon />
-              <Chakra.Box flex="1">
-                <Chakra.VStack align="start" spacing={2}>
-                  <Chakra.Text fontWeight="bold">
-                    {result.type}: {result.value.toFixed(2)} {result.unit}{units === 'imperial' && result.kW !== undefined ? ` (${result.kW.toFixed(0)} kW)` : ''}
-                  </Chakra.Text>
-                  <Chakra.Text fontSize="sm">
-                    {calculateMode === 'heatRelease' ? (
-                      <>
-                        At t = {time} seconds
-                        <br />
-                        Growth rate: {growthRate} (α = {result.alpha} kW/s²)
-                      </>
-                    ) : (
-                      <>
-                        To reach Q = {heatRelease} {units === 'SI' ? 'kW' : 'BTU/s'}
-                        <br />
-                        Growth rate: {growthRate} (α = {result.alpha} kW/s²)
-                      </>
-                    )}
-                  </Chakra.Text>
-                  {calculateMode === 'time' && (
-                    <Chakra.Text fontSize="sm" color="fd.muted">
-                      = {(result.value / 60).toFixed(2)} minutes
-                    </Chakra.Text>
+            <ResultCard
+              stats={[{
+                label: result.type,
+                value: result.value.toFixed(2),
+                unit: result.unit,
+                note: [
+                  units === 'imperial' && result.kW !== undefined ? `(${result.kW.toFixed(0)} kW)` : null,
+                  calculateMode === 'time' ? `= ${(result.value / 60).toFixed(2)} minutes` : null,
+                ].filter(Boolean).join(' ') || null,
+              }]}
+              details={(
+                <Chakra.Text>
+                  {calculateMode === 'heatRelease' ? (
+                    <>
+                      At t = {time} seconds
+                      <br />
+                      Growth rate: {growthRate} (α = {result.alpha} kW/s²)
+                    </>
+                  ) : (
+                    <>
+                      To reach Q = {heatRelease} {units === 'SI' ? 'kW' : 'BTU/s'}
+                      <br />
+                      Growth rate: {growthRate} (α = {result.alpha} kW/s²)
+                    </>
                   )}
-                </Chakra.VStack>
-              </Chakra.Box>
-              <Chakra.VStack>
-                <Chakra.Button
-                  size="sm"
-                  colorScheme={copySuccess ? "green" : "blue"}
-                  onClick={copyResults}
-                >
-                  {copySuccess ? "Copied!" : "Copy Results"}
-                </Chakra.Button>
-                <Chakra.Button
-                  size="sm"
-                  colorScheme="purple"
-                  onClick={saveToHistory}
-                >
-                  Save to History
-                </Chakra.Button>
-              </Chakra.VStack>
-            </Chakra.Alert>
+                </Chakra.Text>
+              )}
+              onCopy={copyResults}
+              copySuccess={copySuccess}
+              onSave={saveToHistory}
+              actions={calculateMode === 'heatRelease' ? <SendHRRMenu kW={result.kW} from="T-Squared Growth" exclude="tSquared" /> : null}
+            />
           )
-        )}
-        {calculateMode === 'heatRelease' && result && !result.error && (
-        <Chakra.Flex justify="flex-end">
-          <SendHRRMenu kW={result.kW} from="T-Squared Growth" exclude="tSquared" />
-        </Chakra.Flex>
         )}
         {result && !result.error && <ShowWork steps={result.steps} />}
 
