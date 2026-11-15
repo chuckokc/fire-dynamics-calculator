@@ -6,6 +6,7 @@ import { FIRE_LOCATIONS, solveFlameHeight } from '../../calculations/flameHeight
 import { DEFAULT_UNITS, FEET, M_TO_FT, convertInput, toSI, fromSI, unitLabel } from '../../calculations/units.js';
 import { fmt } from '../../calculations/work.js';
 import ShowWork from '../ShowWork';
+import UnitInput from '../UnitInput';
 import UnitToggle from '../UnitToggle';
 import { SendHRRMenu, useIncomingHRR } from '../HrrTransfer';
 
@@ -349,64 +350,44 @@ const FlameHeightCalculator = () => {
         {calculateMode !== 'heatRelease' && (
           <Chakra.FormControl isRequired>
             <Chakra.FormLabel>Heat Release Rate</Chakra.FormLabel>
-            <Chakra.NumberInput
-              value={heatRelease}
-              onChange={(vs) => setHeatRelease(vs)}
-              min={0}
-            >
-              <Chakra.NumberInputField inputMode="decimal" />
-            </Chakra.NumberInput>
-            <Chakra.Text fontSize="sm" color="fd.muted">
-              kW
-            </Chakra.Text>
+            <UnitInput unit="kW" value={heatRelease} onChange={(vs) => setHeatRelease(vs)} min={0} />
           </Chakra.FormControl>
         )}
 
         {location.usesSize && calculateMode !== 'diameter' && (
           <Chakra.FormControl isRequired>
             <Chakra.FormLabel>{location.sizeName}</Chakra.FormLabel>
-            <Chakra.NumberInput
+            <UnitInput
+              unit={unitLabel('length', units)}
               value={diameter}
               onChange={(vs) => setDiameter(vs)}
               min={0}
-            >
-              <Chakra.NumberInputField inputMode="decimal" />
-            </Chakra.NumberInput>
-            <Chakra.Text fontSize="sm" color="fd.muted">
-              {unitLabel('length', units)}
-            </Chakra.Text>
+            />
           </Chakra.FormControl>
         )}
 
         {calculateMode !== 'flameHeight' && (
           <Chakra.FormControl isRequired>
             <Chakra.FormLabel>Flame Height</Chakra.FormLabel>
-            <Chakra.NumberInput
+            <UnitInput
+              unit={unitLabel('length', units)}
               value={flameHeight}
               onChange={(vs) => setFlameHeight(vs)}
               min={0}
-            >
-              <Chakra.NumberInputField inputMode="decimal" />
-            </Chakra.NumberInput>
-            <Chakra.Text fontSize="sm" color="fd.muted">
-              {unitLabel('length', units)}
-            </Chakra.Text>
+            />
           </Chakra.FormControl>
         )}
 
         {calculateMode === 'flameHeight' && (
           <Chakra.FormControl>
             <Chakra.FormLabel>Ceiling Height Above the Fire (optional)</Chakra.FormLabel>
-            <Chakra.NumberInput
+            <UnitInput
+              unit={unitLabel('length', units)}
+              hint="From the base of the fire to the ceiling. Checks whether the flames reach it."
               value={ceilingHeight}
               onChange={(vs) => setCeilingHeight(vs)}
               min={0}
-            >
-              <Chakra.NumberInputField inputMode="decimal" />
-            </Chakra.NumberInput>
-            <Chakra.Text fontSize="sm" color="fd.muted">
-              {unitLabel('length', units)}, from the base of the fire to the ceiling. Checks whether the flames reach it.
-            </Chakra.Text>
+            />
           </Chakra.FormControl>
         )}
 

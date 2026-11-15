@@ -6,6 +6,7 @@ import { MATERIALS, flashoverHRR, compareFire } from '../../calculations/flashov
 import { DEFAULT_UNITS, FEET, convertInput, unitLabel } from '../../calculations/units.js';
 import { fmt } from '../../calculations/work.js';
 import ShowWork from '../ShowWork';
+import UnitInput from '../UnitInput';
 import UnitToggle from '../UnitToggle';
 import { useIncomingHRR } from '../HrrTransfer';
 
@@ -129,12 +130,7 @@ const FlashoverCalculator = () => {
   const dimensionField = (label, value, setValue) => (
     <Chakra.FormControl isRequired>
       <Chakra.FormLabel>{label}</Chakra.FormLabel>
-      <Chakra.NumberInput value={value} onChange={(vs) => setValue(vs)} min={0}>
-        <Chakra.NumberInputField inputMode="decimal" />
-      </Chakra.NumberInput>
-      <Chakra.Text fontSize="sm" color="fd.muted">
-        {unitLabel('length', units)}
-      </Chakra.Text>
+      <UnitInput unit={unitLabel('length', units)} value={value} onChange={(vs) => setValue(vs)} min={0} />
     </Chakra.FormControl>
   );
 
@@ -210,12 +206,13 @@ const FlashoverCalculator = () => {
 
         <Chakra.FormControl>
           <Chakra.FormLabel>Compare a Fire (optional)</Chakra.FormLabel>
-          <Chakra.NumberInput value={compareHRR} onChange={(vs) => setCompareHRR(vs)} min={0}>
-            <Chakra.NumberInputField inputMode="decimal" />
-          </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="fd.muted">
-            kW, the heat release rate of a fire in this room. Shows whether it reaches each flashover estimate.
-          </Chakra.Text>
+          <UnitInput
+            unit="kW"
+            hint="The heat release rate of a fire in this room. Shows whether it reaches each flashover estimate."
+            value={compareHRR}
+            onChange={(vs) => setCompareHRR(vs)}
+            min={0}
+          />
         </Chakra.FormControl>
 
         {/* Add history toggle button */}

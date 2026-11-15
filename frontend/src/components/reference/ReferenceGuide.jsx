@@ -1,6 +1,50 @@
-import React from 'react';
+import React, { useId, useState } from 'react';
 import * as Chakra from '@chakra-ui/react';
+import { ChevronDown } from 'lucide-react';
 import ScrollableTabList from '../ScrollableTabList';
+
+// One line of attribution is always visible; the full reference list opens on request
+// so the tables are what a reader sees first.
+const Citations = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const panelId = useId();
+  return (
+    <Chakra.Box sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+      <Chakra.Text fontSize="sm" color="fd.muted">
+        Fire Dynamics Calculator equations (U.S. Nuclear Regulatory Commission, 2013) and data compiled from the sources below.
+      </Chakra.Text>
+      <Chakra.Button
+        variant="link"
+        size="sm"
+        colorScheme="blue"
+        mt={1}
+        rightIcon={
+          <Chakra.Box
+            as="span"
+            display="inline-flex"
+            transform={isOpen ? 'rotate(180deg)' : 'none'}
+            transition="transform 0.2s"
+          >
+            <ChevronDown size={16} />
+          </Chakra.Box>
+        }
+        onClick={() => setIsOpen((open) => !open)}
+        aria-expanded={isOpen}
+        aria-controls={panelId}
+      >
+        {isOpen ? 'Hide full citations' : 'Show full citations'}
+      </Chakra.Button>
+      <Chakra.Collapse in={isOpen} animateOpacity id={panelId}>
+        <Chakra.UnorderedList mt={2} fontSize="sm" color="fd.muted" spacing={1}>
+          <Chakra.ListItem>U.S. Nuclear Regulatory Commission. (2013). Fire dynamics tools (FDTs): Quantitative fire hazard analysis methods for the U.S. Nuclear Regulatory Commission fire protection inspection program (NUREG-1805, Supplement 1, Volumes 1 & 2). Office of Nuclear Reactor Research. https://www.nrc.gov/reading-rm/doc-collections/nuregs/staff/sr1805/s1/index.html.</Chakra.ListItem>
+          <Chakra.ListItem>Gorbett, G., Pharr, J., & Rockwell, S. (2016). Fire dynamics (2nd ed.). Pearson.</Chakra.ListItem>
+          <Chakra.ListItem>Quintiere, J. G. (2016). Principles of fire behavior (2nd ed.). CRC Press.</Chakra.ListItem>
+          <Chakra.ListItem>Fire protection handbook: Vol. I–II (20th ed.). (2008). NFPA.</Chakra.ListItem>
+        </Chakra.UnorderedList>
+      </Chakra.Collapse>
+    </Chakra.Box>
+  );
+};
 
 const ReferenceGuide = () => {
   // Defining table data
@@ -139,15 +183,7 @@ const ReferenceGuide = () => {
   return (
     <Chakra.Box p={{ base: 3, md: 6 }} maxW="6xl" mx="auto" w="100%" overflow="hidden">
       <Chakra.VStack spacing={6} align="stretch">
-        <Chakra.Text fontSize="sm" color="fd.muted" sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-          Fire Dynamics Calculator equations (U.S. Nuclear Regulatory Commission, 2013) and data compiled from:
-          <Chakra.UnorderedList>
-          <Chakra.ListItem>U.S. Nuclear Regulatory Commission. (2013). Fire dynamics tools (FDTs): Quantitative fire hazard analysis methods for the U.S. Nuclear Regulatory Commission fire protection inspection program (NUREG-1805, Supplement 1, Volumes 1 & 2). Office of Nuclear Reactor Research. https://www.nrc.gov/reading-rm/doc-collections/nuregs/staff/sr1805/s1/index.html.</Chakra.ListItem>
-            <Chakra.ListItem>Gorbett, G., Pharr, J., & Rockwell, S. (2016). Fire dynamics (2nd ed.). Pearson.</Chakra.ListItem>
-            <Chakra.ListItem>Quintiere, J. G. (2016). Principles of fire behavior (2nd ed.). CRC Press.</Chakra.ListItem>
-            <Chakra.ListItem>Fire protection handbook: Vol. I–II (20th ed.). (2008). NFPA.</Chakra.ListItem>
-          </Chakra.UnorderedList>
-        </Chakra.Text>
+        <Citations />
 
         <Chakra.Tabs variant="enclosed">
           <ScrollableTabList mb="1em">
