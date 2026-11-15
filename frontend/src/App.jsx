@@ -13,7 +13,7 @@ import { ColorModeScript } from '@chakra-ui/react';
 import theme from './theme';
 import { checkAccess } from './accessCheck';
 
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.7.0';
 
 // MainApp component contains all calculator functionality and the main interface
 const MainApp = () => {
