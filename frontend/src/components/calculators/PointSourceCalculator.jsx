@@ -307,12 +307,20 @@ const PointSourceCalculator = () => {
     setHeatRelease(fromSI(kW, 'hrr', units).toFixed(2));
   });
 
+  // The result is live: it follows the inputs, so it is cleared whenever they are
+  // incomplete or give no answer, and never left showing numbers for a different form.
+  const clearResult = () => {
+    setResult(null);
+    setResultKW(null);
+    setResultSteps(null);
+  };
+
   const calculateHeatFlux = () => {
     const common = { Q: parseFloat(heatRelease), chi: parseFloat(radiativeFraction), units };
     const r = distanceMode === 'edge'
       ? pointSourceFlux({ ...common, edgeDistance: parseFloat(edgeDistance), diameter: parseFloat(fireDiameter) })
       : pointSourceFlux({ ...common, R: parseFloat(distance) });
-    if (!r) return;
+    if (!r) return clearResult();
     setResult(r.value);
     setResultKW(r.kWm2);
     setResultSteps(r.steps);
@@ -351,6 +359,8 @@ const PointSourceCalculator = () => {
   useEffect(() => {
     if (heatRelease && effectiveDistance && radiativeFraction) {
       calculateHeatFlux();
+    } else {
+      clearResult();
     }
   }, [heatRelease, distance, radiativeFraction, units, distanceMode, edgeDistance, fireDiameter]);
 
@@ -557,14 +567,6 @@ const PointSourceCalculator = () => {
             </Chakra.CardBody>
           </Chakra.Card>
         )}
-
-        <Chakra.Button
-          colorScheme="blue"
-          onClick={calculateHeatFlux}
-          isDisabled={!heatRelease || !effectiveDistance || !radiativeFraction}
-        >
-          Calculate Heat Flux
-        </Chakra.Button>
 
         {result && (
           <Chakra.VStack spacing={4} width="100%">

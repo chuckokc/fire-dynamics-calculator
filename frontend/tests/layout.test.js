@@ -153,3 +153,48 @@ test('Flashover groups its five length inputs into room dimensions and ventilati
   assert.equal((source.match(/dimensionField\('/g) || []).length, 5);
   assert.equal((source.match(/<Chakra\.SimpleGrid columns=\{\{ base: 2, sm: 3 \}\}/g) || []).length, 2);
 });
+
+// ---------- live results: no Calculate buttons, and no stale answers ----------
+
+import { heatReleaseRate } from '../src/calculations/hrr.js';
+import { pointSourceFlux } from '../src/calculations/pointSource.js';
+import { flashoverHRR } from '../src/calculations/flashover.js';
+import { solveTSquared } from '../src/calculations/tSquared.js';
+import { solveFlameHeight } from '../src/calculations/flameHeight.js';
+
+test('no calculator has a Calculate button: every result follows the inputs live', () => {
+  for (const name of ['HeatRelease', 'FlameHeight', 'PointSource', 'Flashover', 'TSquared']) {
+    const source = read(`components/calculators/${name}Calculator.jsx`);
+    assert.ok(!/onClick=\{calculate/.test(source), `${name} has a Calculate button`);
+    assert.match(source, /useEffect\(\(\) => \{[\s\S]{0,400}?calculate\w*\(\)/, `${name} should recalculate when an input changes`);
+  }
+});
+
+test('an empty field gives no answer from every solver, and a full form does', () => {
+  // The calculators show a result only when the solver returns one, so null here is
+  // what removes the result card when a field is cleared.
+  assert.equal(heatReleaseRate({ massFlux: 55, heatOfCombustion: 43.7, area: NaN, units: 'SI' }), null);
+  assert.equal(pointSourceFlux({ Q: 1000, chi: 0.3, R: NaN, units: 'SI' }), null);
+  assert.equal(flashoverHRR({ H: 2.4, W: 3.6, L: 4.2, hv: 2, wv: NaN, material: 'gypsum', units: 'SI' }), null);
+  assert.equal(solveTSquared({ mode: 'heatRelease', alpha: 0.0117, t: NaN, Q: NaN, units: 'SI' }), null);
+  assert.equal(solveFlameHeight({ mode: 'flameHeight', location: 'center', Q: 1000, D: NaN, L: NaN, units: 'SI' }), null);
+
+  assert.ok(heatReleaseRate({ massFlux: 55, heatOfCombustion: 43.7, area: 10, units: 'SI' }));
+  assert.ok(pointSourceFlux({ Q: 1000, chi: 0.3, R: 10, units: 'SI' }));
+  assert.ok(flashoverHRR({ H: 2.4, W: 3.6, L: 4.2, hv: 2, wv: 0.9, material: 'gypsum', units: 'SI' }));
+  assert.ok(solveTSquared({ mode: 'heatRelease', alpha: 0.0117, t: 120, Q: NaN, units: 'SI' }));
+  assert.ok(solveFlameHeight({ mode: 'flameHeight', location: 'center', Q: 1000, D: 3, L: NaN, units: 'SI' }));
+});
+
+test('each calculator clears its result when the inputs give no answer', () => {
+  const clears = {
+    HeatRelease: /if \(!r\) return clearResult\(\);[\s\S]*else \{\s*clearResult\(\);/,
+    PointSource: /if \(!r\) return clearResult\(\);[\s\S]*else \{\s*clearResult\(\);/,
+    Flashover: /setResults\(r \? \{[^}]*\} : null\);[\s\S]*else \{[^}]*setResults\(null\);/,
+    TSquared: /if \(!r\) \{\s*setResult\(null\);\s*return;/,
+    FlameHeight: /setResult\(solveFlameHeight\(/, // the solver's null is stored as is
+  };
+  for (const [name, pattern] of Object.entries(clears)) {
+    assert.match(read(`components/calculators/${name}Calculator.jsx`), pattern, name);
+  }
+});

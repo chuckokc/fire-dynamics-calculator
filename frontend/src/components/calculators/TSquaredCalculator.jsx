@@ -394,7 +394,12 @@ const TSquaredCalculator = () => {
       units,
       customAlphaEntered: growthRate === 'custom' ? customAlpha : undefined
     });
-    if (!r) return;
+    // Live result: no answer (for example the time was cleared) means no result is
+    // shown, never the previous one.
+    if (!r) {
+      setResult(null);
+      return;
+    }
     setResult(r);
   };
 
