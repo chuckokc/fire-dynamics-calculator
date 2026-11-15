@@ -6,14 +6,14 @@ import FlameHeightCalculator from './components/calculators/FlameHeightCalculato
 import PointSourceCalculator from './components/calculators/PointSourceCalculator';
 import FlashoverCalculator from './components/calculators/FlashoverCalculator';
 import ReferenceGuide from './components/reference/ReferenceGuide';
-import Authentication from './components/Authentication';
 import TSquaredCalculator from './components/calculators/TSquaredCalculator';
 import { HrrTransferProvider } from './components/HrrTransfer';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { ColorModeScript } from '@chakra-ui/react';
 import theme from './theme';
+import { checkAccess } from './accessCheck';
 
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 
 // MainApp component contains all calculator functionality and the main interface
 const MainApp = () => {
@@ -199,26 +199,20 @@ const MainApp = () => {
   );
 };
 
-// Main App component that handles authentication and renders either the auth screen or main app
+// The access code is checked on the server (netlify/edge-functions), so by the
+// time this app loads the person has already entered it. Each time the app opens
+// we confirm the session is still good; if the code was changed or the session
+// ended, the person is sent back to the access page.
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
   useEffect(() => {
-    const authStatus = localStorage.getItem('fireCalcAuth');
-    if (authStatus === 'granted') {
-      setIsAuthenticated(true);
-    }
+    checkAccess();
   }, []);
 
   return (
     <>
       <ColorModeScript initialColorMode={theme.config.initialColorMode} />
       <Chakra.ChakraProvider theme={theme}>
-        {!isAuthenticated ? (
-          <Authentication onAuthenticated={setIsAuthenticated} />
-        ) : (
-          <MainApp />
-        )}
+        <MainApp />
       </Chakra.ChakraProvider>
     </>
   );
