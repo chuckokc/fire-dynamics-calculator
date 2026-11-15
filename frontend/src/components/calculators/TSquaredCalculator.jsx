@@ -4,6 +4,7 @@ import EquationCard from '../EquationCard';
 import ResultCard from '../ResultCard';
 import { alphaSI, solveTSquared } from '../../calculations/tSquared.js';
 import ShowWork from '../ShowWork';
+import UnitInput from '../UnitInput';
 import { SendHRRMenu, useIncomingHRR } from '../HrrTransfer';
 
 // T-Squared Growth Curve Visual Component
@@ -490,17 +491,13 @@ const TSquaredCalculator = () => {
         {growthRate === 'custom' && (
           <Chakra.FormControl isRequired>
             <Chakra.FormLabel>Custom α (Fire Growth Coefficient)</Chakra.FormLabel>
-            <Chakra.NumberInput
+            <UnitInput
+              unit="kW/s²"
               value={customAlpha}
               onChange={(vs) => setCustomAlpha(vs)}
               min={0}
               step={0.001}
-            >
-              <Chakra.NumberInputField inputMode="decimal" />
-            </Chakra.NumberInput>
-            <Chakra.Text fontSize="sm" color="fd.muted">
-              kW/s²
-            </Chakra.Text>
+            />
           </Chakra.FormControl>
         )}
 
@@ -508,28 +505,12 @@ const TSquaredCalculator = () => {
         {calculateMode === 'heatRelease' ? (
           <Chakra.FormControl isRequired>
             <Chakra.FormLabel>Time</Chakra.FormLabel>
-            <Chakra.NumberInput
-              value={time}
-              onChange={(vs) => setTime(vs)}
-              min={0}
-            >
-              <Chakra.NumberInputField inputMode="decimal" />
-            </Chakra.NumberInput>
-            <Chakra.Text fontSize="sm" color="fd.muted">seconds</Chakra.Text>
+            <UnitInput unit="seconds" value={time} onChange={(vs) => setTime(vs)} min={0} />
           </Chakra.FormControl>
         ) : (
           <Chakra.FormControl isRequired>
             <Chakra.FormLabel>Target Heat Release Rate</Chakra.FormLabel>
-            <Chakra.NumberInput
-              value={heatRelease}
-              onChange={(vs) => setHeatRelease(vs)}
-              min={0}
-            >
-              <Chakra.NumberInputField inputMode="decimal" />
-            </Chakra.NumberInput>
-            <Chakra.Text fontSize="sm" color="fd.muted">
-              kW
-            </Chakra.Text>
+            <UnitInput unit="kW" value={heatRelease} onChange={(vs) => setHeatRelease(vs)} min={0} />
           </Chakra.FormControl>
         )}
 

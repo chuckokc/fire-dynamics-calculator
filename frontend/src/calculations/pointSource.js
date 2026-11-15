@@ -1,12 +1,22 @@
 // Point source radiation (NUREG-1805 Ch. 5.1, spreadsheet 05.1 Point Source):
 // q" = Q χr / (4π R²), R measured from the center of the fire (R = L + D/2).
-import { toSI, METRIC, FEET } from './units.js';
+import { toSI, fromSI, METRIC, FEET } from './units.js';
 import { fmt, step, feetToMetersStep } from './work.js';
 
 export const pointSourceFluxSI = (Q, chi, R) => (Q * chi) / (4 * Math.PI * R * R);
 
 /** Distance (m) at which the flux drops to `targetFlux` kW/m². */
 export const radiusForFluxSI = (Q, chi, targetFlux) => Math.sqrt((Q * chi) / (4 * Math.PI * targetFlux));
+
+/**
+ * How far from the center of the fire a given flux occurs, in the chosen length unit
+ * (the inverse of the point source equation). Returns null until there is a heat
+ * release rate, a radiative fraction and a flux to work from.
+ */
+export const zoneDistance = (Q, chi, targetFlux, units = METRIC) => {
+  if (!(Q > 0) || !(chi > 0) || !(targetFlux > 0)) return null;
+  return fromSI(radiusForFluxSI(Q, chi, targetFlux), 'length', units);
+};
 
 /** Center distance from the edge distance L and fire diameter D (NUREG: R = L + D/2). */
 export const centerDistance = (edgeDistance, diameter) => edgeDistance + diameter / 2;

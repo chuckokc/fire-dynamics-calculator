@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { toSI, fromSI, convertInput, unitLabel, DEFAULT_UNITS } from '../src/calculations/units.js';
 import { MATERIAL_PROPERTIES, heatReleaseRate, labMassFlux } from '../src/calculations/hrr.js';
 import { solveFlameHeight } from '../src/calculations/flameHeight.js';
-import { pointSourceFlux, centerDistance } from '../src/calculations/pointSource.js';
+import { pointSourceFlux, pointSourceFluxSI, centerDistance, zoneDistance } from '../src/calculations/pointSource.js';
 import {
   MATERIALS, T_CHAR_SEC, flashoverHRR, heatTransferCoefficient, mqhHRR, compareFire
 } from '../src/calculations/flashover.js';
@@ -211,6 +211,32 @@ test('point source: edge distance + diameter gives NUREG center distance (05.1 E
   const ri = pointSourceFlux({ Q: 527713.117489372, chi: 0.3, edgeDistance: 29.87 / 0.3048, diameter: D / 0.3048, units: 'feet' });
   near(ri.kWm2, 9.7335250964314, 1e-9, "q'' from edge distance and diameter in feet");
   assert.ok(r.steps.some((st) => st.formula === 'R = L + D/2'), 'shows R = L + D/2 step');
+});
+
+// The Point Source legend tells the reader how far from the fire each flux occurs.
+test('point source: zone distance is the inverse of the flux equation, in meters and feet', () => {
+  const Q = 527713.117489372;
+  // NUREG 05.1: 9.7335250964314 kW/m² occurs 35.9765541151751 m from the center
+  near(zoneDistance(Q, 0.3, 9.7335250964314), 35.9765541151751, 1e-9, 'R in m');
+  near(zoneDistance(Q, 0.3, 9.7335250964314, 'feet'), 35.9765541151751 / 0.3048, 1e-9, 'R in ft');
+  // the four legend fluxes: flux at the returned distance gives the flux back
+  for (const flux of [1.7, 4.5, 5, 20]) {
+    const m = zoneDistance(1500, 0.3, flux);
+    near(pointSourceFluxSI(1500, 0.3, m), flux, 1e-12, `${flux} kW/m² round trip (m)`);
+    const ft = zoneDistance(1500, 0.3, flux, 'feet');
+    near(pointSourceFluxSI(1500, 0.3, ft * 0.3048), flux, 1e-12, `${flux} kW/m² round trip (ft)`);
+  }
+  // a hotter fire reaches farther; a higher flux is closer in
+  assert.ok(zoneDistance(2000, 0.3, 5) > zoneDistance(1000, 0.3, 5));
+  assert.ok(zoneDistance(1000, 0.3, 1.7) > zoneDistance(1000, 0.3, 20));
+});
+
+test('point source: no zone distance until there is a heat release rate to work from', () => {
+  assert.equal(zoneDistance(0, 0.3, 5), null);
+  assert.equal(zoneDistance(NaN, 0.3, 5), null);
+  assert.equal(zoneDistance(1000, 0, 5), null);
+  assert.equal(zoneDistance(1000, 0.3, 0), null);
+  assert.throws(() => zoneDistance(1000, 0.3, 5, 'SI'), /Unknown unit system/);
 });
 
 test('lab helper: mass flux from a burn', () => {

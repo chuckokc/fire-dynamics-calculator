@@ -4,6 +4,7 @@ import EquationCard from '../EquationCard';
 import ResultCard from '../ResultCard';
 import { MATERIAL_PROPERTIES, heatReleaseRate, labMassFlux } from '../../calculations/hrr.js';
 import ShowWork from '../ShowWork';
+import UnitInput from '../UnitInput';
 import { SendHRRMenu } from '../HrrTransfer';
 import { DEFAULT_UNITS, FEET, convertInput, unitLabel } from '../../calculations/units.js';
 import UnitToggle from '../UnitToggle';
@@ -107,10 +108,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
   const labField = (label, value, setValue, unit) => (
     <Chakra.FormControl>
       <Chakra.FormLabel fontSize="sm">{label}</Chakra.FormLabel>
-      <Chakra.NumberInput size="sm" value={value} onChange={(vs) => setValue(vs)} min={0}>
-        <Chakra.NumberInputField inputMode="decimal" />
-      </Chakra.NumberInput>
-      <Chakra.Text fontSize="xs" color="fd.muted">{unit}</Chakra.Text>
+      <UnitInput unit={unit} size="sm" value={value} onChange={(vs) => setValue(vs)} min={0} />
     </Chakra.FormControl>
   );
 
@@ -206,14 +204,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
         {needsMassFluxInput ? (
   <Chakra.FormControl isRequired>
     <Chakra.FormLabel>Mass Flux Rate</Chakra.FormLabel>
-    <Chakra.NumberInput
-      value={manualMassFlux}
-      onChange={(vs) => setManualMassFlux(vs)}
-      min={0}
-    >
-      <Chakra.NumberInputField inputMode="decimal" />
-    </Chakra.NumberInput>
-    <Chakra.Text fontSize="sm" color="fd.muted">g/m²-s</Chakra.Text>
+    <UnitInput unit="g/m²-s" value={manualMassFlux} onChange={(vs) => setManualMassFlux(vs)} min={0} />
   </Chakra.FormControl>
 ) : null}
 
@@ -254,16 +245,12 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
 
         <Chakra.FormControl isRequired>
           <Chakra.FormLabel>Burning Area</Chakra.FormLabel>
-          <Chakra.NumberInput
+          <UnitInput
+            unit={unitLabel('area', units)}
             value={burningArea}
             onChange={(vs) => setBurningArea(vs)}
             min={0}
-          >
-            <Chakra.NumberInputField inputMode="decimal" />
-          </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="fd.muted">
-            {unitLabel('area', units)}
-          </Chakra.Text>
+          />
         </Chakra.FormControl>
 
         <UnitToggle value={units} onChange={handleUnitsChange} quantity="area" />

@@ -16,7 +16,7 @@ import { ColorModeScript } from '@chakra-ui/react';
 import theme from './theme';
 import { checkAccess } from './accessCheck';
 
-const APP_VERSION = '1.10.0';
+const APP_VERSION = '1.11.0';
 
 // One column for every calculator, so the heading, description, warning and form
 // line up and the width does not change when you switch tabs. px matches the

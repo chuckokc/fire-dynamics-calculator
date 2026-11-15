@@ -3,9 +3,11 @@ import * as Chakra from '@chakra-ui/react';
 import EquationCard from '../EquationCard';
 import ResultCard from '../ResultCard';
 import ScrollableTabList from '../ScrollableTabList';
-import { pointSourceFlux, pointSourceFluxSI, radiusForFluxSI } from '../../calculations/pointSource.js';
+import { pointSourceFlux, pointSourceFluxSI, radiusForFluxSI, zoneDistance } from '../../calculations/pointSource.js';
+import { fmt } from '../../calculations/work.js';
 import { DEFAULT_UNITS, FEET, convertInput, toSI, fromSI, unitLabel } from '../../calculations/units.js';
 import ShowWork from '../ShowWork';
+import UnitInput from '../UnitInput';
 import UnitToggle from '../UnitToggle';
 import { useIncomingHRR } from '../HrrTransfer';
 
@@ -163,27 +165,38 @@ const RadiationZoneVisual = ({ heatRelease, distance, radiativeFraction, units }
           minW={{ base: "100%", md: "200px" }}
         >
           <Chakra.VStack align="start" spacing={1}>
-            <Chakra.Text fontSize={{ base: "xs", sm: "xs" }} fontWeight="bold" mb={1}>
+            <Chakra.Text fontSize="xs" fontWeight="bold" mb={1}>
               Heat Flux Zones:
             </Chakra.Text>
             {zones.map((zone) => {
+              // Distance from the center of the fire at which this flux occurs.
+              // Only known once a heat release rate has been entered.
+              const reach = zoneDistance(Q, Xr, zone.flux, units);
               return (
-                <Chakra.HStack key={zone.name} spacing={2} align="center">
-                  <Chakra.Box 
-                    w="12px" 
-                    h="12px" 
-                    bg={zone.color} 
+                <Chakra.HStack key={zone.name} spacing={2} align="start">
+                  <Chakra.Box
+                    w="12px"
+                    h="12px"
+                    mt="2px"
+                    bg={zone.color}
                     borderRadius="sm"
                     flexShrink={0}
                   />
-                  <Chakra.Text fontSize={{ base: "10px", sm: "11px" }} fontWeight="medium">
-                    {zone.flux} kW/m² - {zone.name}
-                    {zone.flux === 5 && (
-                      <Chakra.Text as="span" fontSize={{ base: "9px", sm: "10px" }} color="fd.muted">
-                        {' '}(lens damage)
+                  <Chakra.Box>
+                    <Chakra.Text fontSize="xs" fontWeight="medium">
+                      {zone.flux} kW/m² - {zone.name}
+                      {zone.flux === 5 && (
+                        <Chakra.Text as="span" fontSize="xs" color="fd.muted">
+                          {' '}(lens damage)
+                        </Chakra.Text>
+                      )}
+                    </Chakra.Text>
+                    {reach !== null && (
+                      <Chakra.Text fontSize="xs" color="fd.muted" data-testid="zone-distance">
+                        at {fmt(reach, 3)} {unitLabel('length', units)} from the center of the fire
                       </Chakra.Text>
                     )}
-                  </Chakra.Text>
+                  </Chakra.Box>
                 </Chakra.HStack>
               );
             })}
@@ -376,16 +389,7 @@ const PointSourceCalculator = () => {
 
         <Chakra.FormControl isRequired>
           <Chakra.FormLabel>Heat Release Rate</Chakra.FormLabel>
-          <Chakra.NumberInput
-            value={heatRelease}
-            onChange={(vs) => setHeatRelease(vs)}
-            min={0}
-          >
-            <Chakra.NumberInputField inputMode="decimal" />
-          </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="fd.muted">
-            kW
-          </Chakra.Text>
+          <UnitInput unit="kW" value={heatRelease} onChange={(vs) => setHeatRelease(vs)} min={0} />
         </Chakra.FormControl>
 
         <Chakra.FormControl>
@@ -401,32 +405,33 @@ const PointSourceCalculator = () => {
         {distanceMode === 'center' ? (
           <Chakra.FormControl isRequired>
           <Chakra.FormLabel>Distance to Target</Chakra.FormLabel>
-          <Chakra.NumberInput
+          <UnitInput
+            unit={unitLabel('length', units)}
+            hint="Measured from the center of the fire (edge distance + ½ fire diameter)."
             value={distance}
             onChange={(vs) => setDistance(vs)}
             min={0}
-          >
-            <Chakra.NumberInputField inputMode="decimal" />
-          </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="fd.muted">
-            {unitLabel('length', units)}, measured from the center of the fire (edge distance + ½ fire diameter)
-          </Chakra.Text>
+          />
         </Chakra.FormControl>
         ) : (
           <Chakra.SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
             <Chakra.FormControl isRequired>
               <Chakra.FormLabel>Distance from Fire Edge (L)</Chakra.FormLabel>
-              <Chakra.NumberInput value={edgeDistance} onChange={(vs) => setEdgeDistance(vs)} min={0}>
-                <Chakra.NumberInputField inputMode="decimal" />
-              </Chakra.NumberInput>
-              <Chakra.Text fontSize="sm" color="fd.muted">{unitLabel('length', units)}</Chakra.Text>
+              <UnitInput
+                unit={unitLabel('length', units)}
+                value={edgeDistance}
+                onChange={(vs) => setEdgeDistance(vs)}
+                min={0}
+              />
             </Chakra.FormControl>
             <Chakra.FormControl isRequired>
               <Chakra.FormLabel>Fire Diameter (D)</Chakra.FormLabel>
-              <Chakra.NumberInput value={fireDiameter} onChange={(vs) => setFireDiameter(vs)} min={0}>
-                <Chakra.NumberInputField inputMode="decimal" />
-              </Chakra.NumberInput>
-              <Chakra.Text fontSize="sm" color="fd.muted">{unitLabel('length', units)}</Chakra.Text>
+              <UnitInput
+                unit={unitLabel('length', units)}
+                value={fireDiameter}
+                onChange={(vs) => setFireDiameter(vs)}
+                min={0}
+              />
             </Chakra.FormControl>
             {effectiveDistance && (
               <Chakra.Text fontSize="sm" color="fd.muted" gridColumn={{ sm: 'span 2' }}>
@@ -438,18 +443,14 @@ const PointSourceCalculator = () => {
 
         <Chakra.FormControl>
           <Chakra.FormLabel>Radiative Fraction</Chakra.FormLabel>
-          <Chakra.NumberInput
+          <UnitInput
+            hint="Typical value: 0.3 (30% of total energy)"
             value={radiativeFraction}
             onChange={(vs) => setRadiativeFraction(vs)}
             min={0}
             max={1}
             step={0.1}
-          >
-            <Chakra.NumberInputField inputMode="decimal" />
-          </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="fd.muted">
-            Typical value: 0.3 (30% of total energy)
-          </Chakra.Text>
+          />
         </Chakra.FormControl>
 
         <UnitToggle value={units} onChange={handleUnitsChange} />

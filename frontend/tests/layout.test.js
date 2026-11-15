@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { theme as chakraDefaults } from '@chakra-ui/theme';
@@ -254,4 +254,56 @@ test('flame height shows a length answer in both feet and meters', () => {
   assert.match(source, /const otherLength = /);
   assert.match(source, /note: otherLength \? `\(\$\{otherLength\}\)` : null/);
   assert.match(source, /M_TO_FT/);
+});
+
+// ---------------------------------------------------------------- layout polish (v1.11.0)
+test('every number box shows its unit inside it, through the shared UnitInput', () => {
+  const unitInput = read('components/UnitInput.jsx');
+  assert.match(unitInput, /position="absolute"/, 'the unit sits inside the box');
+  assert.match(unitInput, /pointerEvents="none"/, 'the unit never blocks a tap on the box');
+  assert.match(unitInput, /pr=\{room\}/, 'typed digits keep clear of the unit');
+  const calculators = jsxFiles(join(SRC, 'components', 'calculators'));
+  let boxes = 0;
+  for (const file of calculators) {
+    const source = readFileSync(file, 'utf8');
+    assert.ok(!/<Chakra\.NumberInput[\s>]/.test(source), `${file} builds a NumberInput by hand; use UnitInput`);
+    boxes += (source.match(/<UnitInput\b/g) || []).length;
+  }
+  assert.equal(boxes, 17, 'one UnitInput for each number box in the five calculators');
+});
+
+test('the unit of a length or area box follows the Meters / Feet toggle', () => {
+  for (const name of ['FlameHeight', 'PointSource', 'Flashover', 'HeatRelease']) {
+    const source = read(`components/calculators/${name}Calculator.jsx`);
+    assert.match(source, /unit=\{unitLabel\('(length|area)', units\)\}/, `${name} labels its boxes from the toggle`);
+  }
+  // T-Squared has no length boxes, and every energy box says kW
+  assert.match(read('components/calculators/TSquaredCalculator.jsx'), /unit="kW"/);
+});
+
+test('the Reference citations start collapsed and still list all four sources', () => {
+  const source = read('components/reference/ReferenceGuide.jsx');
+  assert.match(source, /useState\(false\)/, 'collapsed until the reader opens it');
+  assert.match(source, /Show full citations/);
+  assert.match(source, /aria-expanded=\{isOpen\}/);
+  for (const reference of ['NUREG-1805', 'Gorbett', 'Quintiere', 'Fire protection handbook']) {
+    assert.ok(source.includes(reference), `${reference} is still cited`);
+  }
+  assert.ok(!/<Chakra\.Text[^>]*>[^<]*compiled from:\s*<Chakra\.UnorderedList/.test(source),
+    'a list is not nested inside a paragraph');
+});
+
+test('the Point Source legend gives the distance at which each zone begins', () => {
+  const source = read('components/calculators/PointSourceCalculator.jsx');
+  assert.match(source, /zoneDistance\(Q, Xr, zone\.flux, units\)/);
+  assert.match(source, /from the center of the fire/);
+  assert.match(source, /reach !== null/, 'shown only when a heat release rate is entered');
+  assert.ok(!/displayRadius/.test(source), 'the unused radius code stays gone');
+});
+
+test('the unused Vite template stylesheet is gone', () => {
+  assert.ok(!existsSync(join(SRC, 'App.css')));
+  for (const file of jsxFiles(SRC)) {
+    assert.ok(!/App\.css/.test(readFileSync(file, 'utf8')), `${file} still imports App.css`);
+  }
 });
