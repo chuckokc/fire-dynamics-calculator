@@ -11,6 +11,7 @@ export default async (request, context) =>
 
 export const config = {
   path: '/*',
-  // Handled by access.js, or safe to serve publicly (install manifest and icons).
-  excludedPath: ['/access', '/access/*', '/icons/*', '/favicon.ico', '/manifest.json', '/manifest.webmanifest'],
+  // Handled by access.js, or safe to serve publicly (install manifest and icons, and
+  // forms.html, where the request-a-code and feedback forms are posted).
+  excludedPath: ['/access', '/access/*', '/icons/*', '/favicon.ico', '/manifest.json', '/manifest.webmanifest', '/forms.html'],
 };

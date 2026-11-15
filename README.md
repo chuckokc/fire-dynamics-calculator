@@ -66,13 +66,34 @@ app's files are served, and the code is not in this repo or in the app.
   single common word.
 - `npm run dev` does not run the Edge Functions, so the local dev server is
   not gated.
-- The login page lets visitors request a code by email to the creator, with the
-  message ready to fill in (name, agency or class). A plain `mailto:` link does
-  nothing on a device with no mail app registered, so there are three ways in:
-  **Gmail** and **Outlook** (both open a new message in the browser) and
-  **Mail app** (the `mailto:` link). There is also a **Copy address** button, and
-  the address is shown as plain text.
-- Public on purpose: the login page, the install manifest and the icons.
+- The login page has a **Don't have a code? Request one** form (name, email,
+  agency/school/class, how they heard) and a **Send feedback** form; the app's
+  **Provide Feedback** button opens the same kind of form. They are stored by
+  Netlify Forms, which emails the site owner, so nobody needs an email app and
+  the owner's address is not on the site. See "Request and feedback forms" below.
+- Public on purpose: the login page, the install manifest, the icons and
+  `/forms.html` (where the forms are posted by people who have no code yet).
+
+## Request and feedback forms
+
+Requests for a code and feedback go through Netlify Forms (free plan: about 100
+submissions a month, and Netlify's spam filter plus a hidden trap field keep bots
+out). To work, they need:
+
+1. **Form detection turned on** (Netlify: Forms, then Enable form detection). It is
+   on for this site.
+2. **`frontend/public/forms.html`**, a hidden page that lists both forms. Netlify
+   reads it at deploy time. The login page and the app post to it. If you add or
+   rename a field, change it here, on the login page
+   (`netlify/edge-functions/lib/access.js`) and in `src/sendForm.js` /
+   `src/components/FeedbackModal.jsx`; `tests/forms.test.js` fails if they disagree.
+3. **An email notification**, so you hear about each submission (Netlify: Project
+   configuration, Notifications, Emails and webhooks, Form submission
+   notifications; pick the form or all forms). Netlify sends these from
+   `formresponses@netlify.com`, and replies go there rather than to the
+   requester, so reply to the address in the request itself.
+
+Requests and feedback are also listed under Forms in Netlify.
 
 ## Checks
 

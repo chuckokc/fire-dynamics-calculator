@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
-import { Mail, Sun, Moon } from 'lucide-react';
+import { MessageSquare, Sun, Moon } from 'lucide-react';
 import HeatReleaseCalculator from './components/calculators/HeatReleaseCalculator';
 import FlameHeightCalculator from './components/calculators/FlameHeightCalculator';
 import PointSourceCalculator from './components/calculators/PointSourceCalculator';
@@ -8,6 +8,7 @@ import FlashoverCalculator from './components/calculators/FlashoverCalculator';
 import ReferenceGuide from './components/reference/ReferenceGuide';
 import TSquaredCalculator from './components/calculators/TSquaredCalculator';
 import { HrrTransferProvider } from './components/HrrTransfer';
+import FeedbackModal from './components/FeedbackModal';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { ColorModeScript } from '@chakra-ui/react';
 import theme from './theme';
@@ -31,10 +32,9 @@ const MainApp = () => {
     updateServiceWorker,
   } = useRegisterSW();
 
-    // Handler for feedback button clicks - opens email client
-  const handleFeedbackClick = () => {
-    window.location.href = 'mailto:chuckokc@gmail.com?subject=Fire Dynamics Calculator Feedback';
-  };
+  // Feedback is sent through a form (see FeedbackModal), not an email link, so it
+  // works without an email app and the owner's address is never shown.
+  const feedback = Chakra.useDisclosure();
 
   return (
     <Chakra.Box minH="100vh" bg={bgColor}>
@@ -88,10 +88,10 @@ const MainApp = () => {
                 aria-label="Toggle dark mode"
               />
               <Chakra.Button
-                leftIcon={<Mail size={16} />}
+                leftIcon={<MessageSquare size={16} />}
                 variant="ghost"
                 size="sm"
-                onClick={handleFeedbackClick}
+                onClick={feedback.onOpen}
                 colorScheme="blue"
               >
                 Provide Feedback
@@ -195,6 +195,7 @@ const MainApp = () => {
         </Chakra.Tabs>
         </HrrTransferProvider>
       </Chakra.Container>
+      <FeedbackModal isOpen={feedback.isOpen} onClose={feedback.onClose} appVersion={APP_VERSION} />
     </Chakra.Box>
   );
 };

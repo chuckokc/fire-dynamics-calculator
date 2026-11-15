@@ -22,32 +22,12 @@ const NO_STORE = { 'cache-control': 'no-store' };
 
 const encoder = new TextEncoder();
 
-// People who do not have a code can email the creator from the login page.
-// A plain mailto: link only works when the visitor has a mail app registered on
-// their device (many do not), so the page also offers Gmail and Outlook on the
-// web and a copy-the-address button.
-const CREATOR_EMAIL = 'chuckokc@gmail.com';
-const REQUEST_SUBJECT = 'Fire Dynamics Calculator Access Request';
-const REQUEST_BODY_LINES = [
-  'Hello Chuck,',
-  '',
-  'I would like the access code for the Fire Dynamics Calculator.',
-  '',
-  'Name:',
-  'Agency / school / class:',
-  'How I heard about the calculator:',
-  '',
-  'Thank you.',
-];
-const requestQuery = (subjectKey, lineBreak) =>
-  `${subjectKey}=${encodeURIComponent(REQUEST_SUBJECT)}&body=${encodeURIComponent(REQUEST_BODY_LINES.join(lineBreak))}`;
-export const REQUEST_ACCESS_MAILTO = `mailto:${CREATOR_EMAIL}?${requestQuery('subject', '\r\n')}`;
-export const REQUEST_ACCESS_GMAIL =
-  `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(CREATOR_EMAIL)}&${requestQuery('su', '\n')}`;
-export const REQUEST_ACCESS_OUTLOOK =
-  `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(CREATOR_EMAIL)}&${requestQuery('subject', '\n')}`;
-const escapeAttr = (value) => value.replace(/&/g, '&amp;');
-const FEEDBACK_MAILTO = `mailto:${CREATOR_EMAIL}?subject=${encodeURIComponent('Fire Dynamics Calculator Feedback')}`;
+// People without a code ask for one with a form on the login page, and the page
+// has a feedback form too. Netlify Forms stores each one and emails the site
+// owner, so the owner's address is never on the page and visitors need no email
+// app. The forms are declared in public/forms.html, which is also where they are
+// posted; keep the field names here in step with it (tests/forms.test.js checks).
+const FORMS_PATH = '/forms.html';
 
 // Codes are not case-sensitive and ignore stray or repeated spaces.
 export const normalizeCode = (value) => String(value ?? '').trim().replace(/\s+/g, ' ').toUpperCase();
@@ -182,14 +162,16 @@ export function readCookie(header, name) {
 export const sessionCookie = (token) =>
   `${COOKIE_NAME}=${token}; Path=/; Max-Age=${SESSION_SECONDS}; HttpOnly; Secure; SameSite=Lax`;
 
-// Files that are safe to serve without a code: the login page itself plus the
-// install manifest and icons (browsers fetch these without cookies).
+// Files that are safe to serve without a code: the login page itself, the install
+// manifest and icons (browsers fetch these without cookies), and forms.html (the
+// request and feedback forms are posted there by people who have no code yet).
 export function isPublicPath(pathname) {
   return (
     pathname === '/access' ||
     pathname.startsWith('/access/') ||
     pathname.startsWith('/icons/') ||
     pathname === '/favicon.ico' ||
+    pathname === FORMS_PATH ||
     pathname === '/manifest.json' ||
     pathname === '/manifest.webmanifest'
   );
@@ -276,13 +258,17 @@ export function loginPage({ error = false, expired = false } = {}) {
   .error { margin:0 0 1rem; padding:.6rem .8rem; border:1px solid var(--err); border-radius:.4rem; color:var(--err); text-align:left; }
   .notice { margin:0 0 1rem; padding:.6rem .8rem; border:1px solid var(--line); border-radius:.4rem; color:var(--muted); text-align:left; }
   hr { border:0; border-top:1px solid var(--line); margin:1.5rem 0 1rem; }
-  .request { margin:1.25rem 0 0; font-size:.95rem; }
-  .request p { margin:.35rem 0; }
-  .options { display:flex; flex-wrap:wrap; gap:.5rem; justify-content:center; margin:.6rem 0; }
-  .options a, .options button { padding:.45rem .8rem; border:1px solid var(--line); border-radius:.4rem; background:transparent; color:var(--blue); font-size:.95rem; text-decoration:none; }
-  .options a:hover, .options button:hover { border-color:var(--blue); }
-  #addr { font-weight:600; user-select:all; word-break:break-all; }
-  #copied { color:var(--muted); }
+  .panel { margin:1rem 0 0; padding:.7rem .9rem; border:1px solid var(--line); border-radius:.5rem; text-align:left; }
+  .panel summary { cursor:pointer; color:var(--blue); font-weight:600; }
+  .panel[open] summary { margin-bottom:.9rem; }
+  .send input, .send textarea { display:block; width:100%; margin-bottom:.8rem; padding:.6rem .7rem; font-size:1rem; font-family:inherit; border:1px solid var(--line); border-radius:.4rem; background:transparent; color:inherit; }
+  .send textarea { resize:vertical; }
+  .send input:focus, .send textarea:focus { outline:2px solid var(--blue); outline-offset:1px; }
+  .send .hp { position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+  .send.done .fields { display:none; }
+  .hint { color:var(--muted); font-size:.85rem; }
+  .status { margin:.5rem 0 0; font-size:.95rem; }
+  .status.err { color:var(--err); }
   .small { margin:.25rem 0; font-size:.9rem; color:var(--muted); }
   a { color:var(--blue); }
 </style>
@@ -301,19 +287,45 @@ export function loginPage({ error = false, expired = false } = {}) {
     </div>
     <button type="submit" class="primary">Access Calculator</button>
   </form>
-  <div class="request">
-    <p>Don't have a code? Email Chuck to request one:</p>
-    <div class="options">
-      <a href="${escapeAttr(REQUEST_ACCESS_GMAIL)}" target="_blank" rel="noopener noreferrer">Gmail</a>
-      <a href="${escapeAttr(REQUEST_ACCESS_OUTLOOK)}" target="_blank" rel="noopener noreferrer">Outlook</a>
-      <a href="${escapeAttr(REQUEST_ACCESS_MAILTO)}">Mail app</a>
-      <button type="button" id="copy">Copy address</button>
-    </div>
-    <p class="small">Or write to <span id="addr">${CREATOR_EMAIL}</span> <span id="copied" role="status"></span></p>
-  </div>
+  <details class="panel"${expired ? ' open' : ''}>
+    <summary>Don't have a code? Request one</summary>
+    <form class="send" method="post" action="${FORMS_PATH}" data-sent="Thank you! Your request was sent. Chuck will review it and email the code to the address you gave.">
+      <input type="hidden" name="form-name" value="access-request">
+      <input type="hidden" name="subject" value="Fire Dynamics Calculator access request">
+      <div class="hp" aria-hidden="true"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off"></label></div>
+      <div class="fields">
+        <label for="rq-name">Name</label>
+        <input id="rq-name" name="name" required maxlength="100" autocomplete="name">
+        <label for="rq-email">Your email address <span class="hint">(the code will be sent here)</span></label>
+        <input id="rq-email" name="email" type="email" required maxlength="200" autocomplete="email">
+        <label for="rq-org">Agency, school or class</label>
+        <input id="rq-org" name="organization" required maxlength="150">
+        <label for="rq-heard">How did you hear about the calculator? <span class="hint">(optional)</span></label>
+        <input id="rq-heard" name="heard_from" maxlength="200">
+        <button type="submit" class="primary">Send request</button>
+      </div>
+      <p class="status" role="status"></p>
+    </form>
+  </details>
+  <details class="panel">
+    <summary>Send feedback</summary>
+    <form class="send" method="post" action="${FORMS_PATH}" data-sent="Thank you! Your feedback was sent.">
+      <input type="hidden" name="form-name" value="feedback">
+      <input type="hidden" name="subject" value="Fire Dynamics Calculator feedback">
+      <input type="hidden" name="app_version" value="login page">
+      <div class="hp" aria-hidden="true"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off"></label></div>
+      <div class="fields">
+        <label for="fb-message">Your message</label>
+        <textarea id="fb-message" name="message" required maxlength="3000" rows="5"></textarea>
+        <label for="fb-email">Your email address <span class="hint">(optional, only if you would like a reply)</span></label>
+        <input id="fb-email" name="email" type="email" maxlength="200" autocomplete="email">
+        <button type="submit" class="primary">Send feedback</button>
+      </div>
+      <p class="status" role="status"></p>
+    </form>
+  </details>
   <hr>
   <p class="small">With dedication from Chuck ❤️ Christine Carpenter</p>
-  <p class="small"><a href="${FEEDBACK_MAILTO}">Provide Feedback</a></p>
 </main>
 <script>
   var code = document.getElementById('code');
@@ -325,29 +337,30 @@ export function loginPage({ error = false, expired = false } = {}) {
     toggle.setAttribute('aria-pressed', String(show));
   });
 
-  var copyButton = document.getElementById('copy');
-  var addr = document.getElementById('addr');
-  var copied = document.getElementById('copied');
-  function selectAddress() {
-    var range = document.createRange();
-    range.selectNodeContents(addr);
-    var selection = window.getSelection();
-    selection.removeAllRanges();
-    selection.addRange(range);
-  }
-  copyButton.addEventListener('click', function () {
-    var text = addr.textContent;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(function () {
-        copied.textContent = '\\u2013 copied';
-      }, function () {
-        selectAddress();
-        copied.textContent = '\\u2013 selected, press Ctrl+C';
+  // The request and feedback forms are sent in the background so the page stays put.
+  // Without JavaScript they post normally to the same address.
+  Array.prototype.forEach.call(document.querySelectorAll('form.send'), function (form) {
+    var status = form.querySelector('.status');
+    var button = form.querySelector('button[type="submit"]');
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      button.disabled = true;
+      status.className = 'status';
+      status.textContent = 'Sending\u2026';
+      fetch(form.getAttribute('action'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(new FormData(form)).toString()
+      }).then(function (response) {
+        if (!response.ok) throw new Error('not sent');
+        form.classList.add('done');
+        status.textContent = form.getAttribute('data-sent');
+      }).catch(function () {
+        button.disabled = false;
+        status.className = 'status err';
+        status.textContent = 'Sorry, that did not send. Please try again in a few minutes.';
       });
-    } else {
-      selectAddress();
-      copied.textContent = '\\u2013 selected, press Ctrl+C';
-    }
+    });
   });
 </script>
 </body>

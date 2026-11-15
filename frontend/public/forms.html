@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<title>Fire Dynamics Calculator forms</title>
+</head>
+<body>
+<!--
+  Nothing to see here. This page exists only so Netlify can find the site's forms
+  when it deploys. The login page and the app send their requests to /forms.html.
+  Keep the field names below identical to the ones they send: tests/forms.test.js
+  checks this, and a mismatch would lose the request.
+-->
+
+<form name="access-request" method="POST" data-netlify="true" netlify-honeypot="bot-field" hidden>
+  <input type="hidden" name="form-name" value="access-request">
+  <input type="hidden" name="subject" value="Fire Dynamics Calculator access request">
+  <input name="bot-field">
+  <input name="name">
+  <input name="email" type="email">
+  <input name="organization">
+  <input name="heard_from">
+</form>
+
+<form name="feedback" method="POST" data-netlify="true" netlify-honeypot="bot-field" hidden>
+  <input type="hidden" name="form-name" value="feedback">
+  <input type="hidden" name="subject" value="Fire Dynamics Calculator feedback">
+  <input name="bot-field">
+  <textarea name="message"></textarea>
+  <input name="email" type="email">
+  <input name="app_version">
+</form>
+
+</body>
+</html>

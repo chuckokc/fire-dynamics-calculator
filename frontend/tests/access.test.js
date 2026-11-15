@@ -6,9 +6,6 @@ import assert from 'node:assert/strict';
 
 import {
   COOKIE_NAME,
-  REQUEST_ACCESS_GMAIL,
-  REQUEST_ACCESS_MAILTO,
-  REQUEST_ACCESS_OUTLOOK,
   SESSION_SECONDS,
   SIGN_OUT_SERVICE_WORKER,
   accessState,
@@ -182,11 +179,11 @@ test('readCookie finds the right cookie among several', () => {
   assert.equal(readCookie(null, 'fc_access'), null);
 });
 
-test('only the login page, install manifest and icons are public', () => {
-  for (const p of ['/access', '/access/', '/access/status', '/icons/icon-192x192.png', '/favicon.ico', '/manifest.json', '/manifest.webmanifest']) {
+test('only the login page, install manifest, icons and forms page are public', () => {
+  for (const p of ['/access', '/access/', '/access/status', '/icons/icon-192x192.png', '/favicon.ico', '/manifest.json', '/manifest.webmanifest', '/forms.html']) {
     assert.equal(isPublicPath(p), true, p);
   }
-  for (const p of ['/', '/index.html', '/sw.js', '/assets/index-abc.js', '/assets/index-abc.js.map', '/accessory', '/iconsx/a.png', '/workbox-1.js']) {
+  for (const p of ['/', '/index.html', '/sw.js', '/assets/index-abc.js', '/assets/index-abc.js.map', '/accessory', '/iconsx/a.png', '/workbox-1.js', '/forms', '/forms.htm', '/forms.html/extra', '/xforms.html']) {
     assert.equal(isPublicPath(p), false, p);
   }
   // Dot-segment tricks are resolved by the URL parser before we ever see the path.
@@ -281,9 +278,11 @@ test('gate: signed-out installed apps get a self-removing service worker instead
 
 test('gate: public paths pass straight through', async () => {
   const next = makeNext();
-  for (const path of ['/icons/icon-192x192.png', '/manifest.json', '/favicon.ico']) {
+  for (const path of ['/icons/icon-192x192.png', '/manifest.json', '/favicon.ico', '/forms.html']) {
     assert.equal((await handleGate(get(path), next, ENV)).status, 200, path);
   }
+  // People with no code yet post the request and feedback forms to /forms.html.
+  assert.equal((await handleGate(post('/forms.html', 'form-name=access-request&name=A'), next, ENV)).status, 200);
 });
 
 // ---------- the login page ----------
@@ -296,55 +295,51 @@ test('login page: shows the form, never the code, and is not cached', async () =
   const html = await res.text();
   assert.match(html, /name="code"/);
   assert.match(html, /Access Calculator/);
-  assert.match(html, /Provide Feedback/);
+  assert.match(html, /Send feedback/);
   assert.equal(html.toLowerCase().includes(ENV.ACCESS_CODE), false);
   assert.doesNotMatch(html, /role="alert"/);
   assert.match(loginPage({ error: true }), /role="alert"/);
 });
 
-test('login page: offers an email to the creator to request the code', async () => {
-  // The link itself: right address, subject, and a body with room for name/agency.
-  const url = new URL(REQUEST_ACCESS_MAILTO);
-  assert.equal(url.protocol, 'mailto:');
-  assert.equal(url.pathname, 'chuckokc@gmail.com');
-  assert.equal(url.searchParams.get('subject'), 'Fire Dynamics Calculator Access Request');
-  const body = url.searchParams.get('body');
-  assert.match(body, /access code/i);
-  assert.match(body, /Name:/);
-  assert.match(body, /Agency \/ school \/ class:/);
-  assert.ok(body.includes('\r\n'), 'body should have line breaks');
-  assert.equal(body.toLowerCase().includes(ENV.ACCESS_CODE), false);
-
-  // Gmail and Outlook on the web, for people with no mail app on their device.
-  const gmail = new URL(REQUEST_ACCESS_GMAIL);
-  assert.equal(gmail.origin, 'https://mail.google.com');
-  assert.equal(gmail.searchParams.get('view'), 'cm');
-  assert.equal(gmail.searchParams.get('to'), 'chuckokc@gmail.com');
-  assert.equal(gmail.searchParams.get('su'), 'Fire Dynamics Calculator Access Request');
-  assert.match(gmail.searchParams.get('body'), /Agency \/ school \/ class:/);
-  const outlook = new URL(REQUEST_ACCESS_OUTLOOK);
-  assert.equal(outlook.origin, 'https://outlook.office.com');
-  assert.equal(outlook.pathname, '/mail/deeplink/compose');
-  assert.equal(outlook.searchParams.get('to'), 'chuckokc@gmail.com');
-  assert.equal(outlook.searchParams.get('subject'), 'Fire Dynamics Calculator Access Request');
-  assert.match(outlook.searchParams.get('body'), /Name:/);
-  for (const link of [REQUEST_ACCESS_GMAIL, REQUEST_ACCESS_OUTLOOK, REQUEST_ACCESS_MAILTO]) {
-    assert.equal(link.toLowerCase().includes(ENV.ACCESS_CODE), false);
-  }
-
-  // On the page: all three links, the copy button and the plain-text address. The
-  // & between query parameters is escaped for HTML, and the web links open in a new tab.
-  const asAttribute = (link) => link.replace(/&/g, '&amp;');
+test('login page: request-a-code and feedback forms, with no email address or mail link', async () => {
   for (const html of [loginPage(), loginPage({ error: true }), loginPage({ expired: true })]) {
-    assert.match(html, /Don't have a code\? Email Chuck to request one:/);
-    assert.ok(html.includes(`<a href="${asAttribute(REQUEST_ACCESS_GMAIL)}" target="_blank" rel="noopener noreferrer">Gmail</a>`));
-    assert.ok(html.includes(`<a href="${asAttribute(REQUEST_ACCESS_OUTLOOK)}" target="_blank" rel="noopener noreferrer">Outlook</a>`));
-    assert.ok(html.includes(`<a href="${asAttribute(REQUEST_ACCESS_MAILTO)}">Mail app</a>`));
-    assert.match(html, /<button type="button" id="copy">Copy address<\/button>/);
-    assert.match(html, /<span id="addr">chuckokc@gmail\.com<\/span>/, 'address is also shown as plain text');
-    assert.match(html, /navigator\.clipboard\.writeText/);
-    assert.match(html, /Provide Feedback/);
+    const forms = [...html.matchAll(/<form class="send"[^>]*>[\s\S]*?<\/form>/g)].map((m) => m[0]);
+    assert.equal(forms.length, 2, 'a request form and a feedback form');
+    const [request, feedback] = forms;
+
+    // Both post to the public forms page, name their Netlify form, and carry a trap field for bots.
+    for (const form of forms) {
+      assert.match(form, /method="post" action="\/forms\.html"/);
+      assert.match(form, /name="bot-field"/);
+      assert.match(form, /type="hidden" name="subject"/);
+      assert.match(form, /data-sent="/);
+    }
+    assert.match(request, /<input type="hidden" name="form-name" value="access-request">/);
+    assert.match(feedback, /<input type="hidden" name="form-name" value="feedback">/);
+
+    // The request asks who they are and where to send the code.
+    assert.match(request, /name="name" required/);
+    assert.match(request, /name="email" type="email" required/);
+    assert.match(request, /name="organization" required/);
+    assert.match(request, /name="heard_from"/);
+    assert.match(request, /Send request/);
+    // Feedback: a message (required) and an optional email for a reply.
+    assert.match(feedback, /<textarea id="fb-message" name="message" required/);
+    assert.doesNotMatch(feedback, /name="email" type="email" required/);
+
+    // The creator's address is nowhere on the page, and there are no email links.
+    assert.doesNotMatch(html, /mailto:/i);
+    assert.doesNotMatch(html, /[A-Za-z0-9._+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}/);
+    assert.equal(html.toLowerCase().includes(ENV.ACCESS_CODE), false);
+
+    // Forms are sent in the background and report success or failure.
+    assert.match(html, /fetch\(form\.getAttribute\('action'\)/);
+    assert.match(html, /application\/x-www-form-urlencoded/);
+    assert.match(html, /Sorry, that did not send/);
   }
+  // The request form is open by default when the codes have expired, closed otherwise.
+  assert.match(loginPage({ expired: true }), /<details class="panel" open>/);
+  assert.doesNotMatch(loginPage(), /<details class="panel" open>/);
 });
 
 test('login: the right code signs you in with a safe cookie and sends you to the app', async () => {

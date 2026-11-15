@@ -48,6 +48,8 @@ export default defineConfig({
   skipWaiting: false,
   clientsClaim: true,
   globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2}'],
+  // forms.html is only for Netlify's form detection; the app never needs it offline.
+  globIgnores: ['**/forms.html'],
   maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
   dontCacheBustURLsMatching: /\.\w{8}\./,
   // Add this to ignore chrome extension URLs
