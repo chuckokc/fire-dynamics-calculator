@@ -87,11 +87,14 @@ out). To work, they need:
    rename a field, change it here, on the login page
    (`netlify/edge-functions/lib/access.js`) and in `src/sendForm.js` /
    `src/components/FeedbackModal.jsx`; `tests/forms.test.js` fails if they disagree.
-3. **An email notification**, so you hear about each submission (Netlify: Project
-   configuration, Notifications, Emails and webhooks, Form submission
-   notifications; pick the form or all forms). Netlify sends these from
-   `formresponses@netlify.com`, and replies go there rather than to the
-   requester, so reply to the address in the request itself.
+3. **An email notification**, so you hear about each submission (Netlify: Forms,
+   then Submission notifications, then Add notification, then Email notification;
+   pick one form or all forms). Not the Deploy notifications page under Project
+   configuration: email is a paid option there. The recipient must be a member of
+   your Netlify team, or confirm a one-time email Netlify sends them. Netlify
+   sends these from `formresponses@netlify.com`; both forms have a field named
+   `email`, which Netlify uses as the reply-to address so Reply goes to the
+   person who filled in the form. Keep a field named `email` in any form you add.
 
 Requests and feedback are also listed under Forms in Netlify.
 
