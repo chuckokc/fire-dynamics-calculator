@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
 import EquationCard from '../EquationCard';
+import ResultCard from '../ResultCard';
 import { MATERIAL_PROPERTIES, heatReleaseRate, labMassFlux } from '../../calculations/hrr.js';
 import ShowWork from '../ShowWork';
 import { SendHRRMenu } from '../HrrTransfer';
@@ -351,49 +352,34 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
         
 
         {result && (
-  <Chakra.Alert status="success">
-    <Chakra.AlertIcon />
-    <Chakra.Box flex="1">
-      <Chakra.VStack align="start" spacing={2}>
-        <Chakra.Text fontWeight="bold">
-          Heat Release Rate: {result.toFixed(0)} {units === 'SI' ? 'kW' : `BTU/s (${resultKW.toFixed(0)} kW)`}
-        </Chakra.Text>
-        {material && (
-          <Chakra.Text fontSize="sm">
-            Using {MATERIAL_PROPERTIES[material].name} with:
-            <br />
-            Mass Flux: {needsMassFluxInput ? manualMassFlux : MATERIAL_PROPERTIES[material].massFlux} g/m²-s
-            <br />
-            Heat of Combustion: {MATERIAL_PROPERTIES[material].heatOfCombustion} kJ/g
-          </Chakra.Text>
-        )}
-        <Chakra.Text fontSize="sm" color="fd.muted">
-          Conversion: 1 kW = 0.947817 BTU/s
-        </Chakra.Text>
-      </Chakra.VStack>
-    </Chakra.Box>
-    <Chakra.VStack>
-      <Chakra.Button
-        size="sm"
-        colorScheme={copySuccess ? "green" : "blue"}
-        onClick={copyResults}
-      >
-        {copySuccess ? "Copied!" : "Copy Results"}
-      </Chakra.Button>
-      <Chakra.Button
-        size="sm"
-        colorScheme="purple"
-        onClick={saveToHistory}
-      >
-        Save to History
-      </Chakra.Button>
-    </Chakra.VStack>
-  </Chakra.Alert>
-)}
-        {result && (
-        <Chakra.Flex justify="flex-end">
-          <SendHRRMenu kW={resultKW} from="Heat Release Rate" />
-        </Chakra.Flex>
+          <ResultCard
+            stats={[{
+              label: 'Heat Release Rate',
+              value: result.toFixed(0),
+              unit: units === 'SI' ? 'kW' : 'BTU/s',
+              note: units === 'SI' ? null : `(${resultKW.toFixed(0)} kW)`,
+            }]}
+            details={(
+              <>
+                {material && (
+                  <Chakra.Text>
+                    Using {MATERIAL_PROPERTIES[material].name} with:
+                    <br />
+                    Mass Flux: {needsMassFluxInput ? manualMassFlux : MATERIAL_PROPERTIES[material].massFlux} g/m²-s
+                    <br />
+                    Heat of Combustion: {MATERIAL_PROPERTIES[material].heatOfCombustion} kJ/g
+                  </Chakra.Text>
+                )}
+                <Chakra.Text color="fd.muted" mt={2}>
+                  Conversion: 1 kW = 0.947817 BTU/s
+                </Chakra.Text>
+              </>
+            )}
+            onCopy={copyResults}
+            copySuccess={copySuccess}
+            onSave={saveToHistory}
+            actions={<SendHRRMenu kW={resultKW} from="Heat Release Rate" />}
+          />
         )}
         {result && <ShowWork steps={resultSteps} />}
       </Chakra.VStack>

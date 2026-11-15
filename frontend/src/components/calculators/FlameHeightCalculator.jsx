@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
 import EquationCard from '../EquationCard';
+import ResultCard from '../ResultCard';
 import { FIRE_LOCATIONS, solveFlameHeight } from '../../calculations/flameHeight.js';
 import { DEFAULT_UNITS, convertInput, toSI, fromSI } from '../../calculations/units.js';
 import { fmt } from '../../calculations/work.js';
@@ -504,45 +505,33 @@ const FlameHeightCalculator = () => {
       <Chakra.Text>{result.error}</Chakra.Text>
     </Chakra.Alert>
   ) : result.value && (
-    <Chakra.Alert status="success">
-      <Chakra.AlertIcon />
-      <Chakra.Box flex="1">
-        <Chakra.VStack align="start" spacing={2}>
-          <Chakra.Text fontWeight="bold">
-            {result.type}: {result.value > 0 ? result.value.toFixed(2) : 'N/A'} {result.unit}{units === 'imperial' && result.kW > 0 ? ` (${result.kW.toFixed(0)} kW)` : ''}
-          </Chakra.Text>
-          <Chakra.Text fontSize="sm">
-            Based on:
-            <br />Fire Location: {location.label}
-            {calculateMode !== 'heatRelease' && (
-              <><br />Heat Release Rate: {heatRelease} {units === 'SI' ? 'kW' : 'BTU/s'}</>
-            )}
-            {location.usesSize && calculateMode !== 'diameter' && (
-              <><br />{location.sizeName}: {diameter} {units === 'SI' ? 'm' : 'ft'}</>
-            )}
-            {calculateMode !== 'flameHeight' && (
-              <><br />Flame Height: {flameHeight} {units === 'SI' ? 'm' : 'ft'}</>
-            )}
-          </Chakra.Text>
-        </Chakra.VStack>
-      </Chakra.Box>
-      <Chakra.VStack>
-        <Chakra.Button
-          size="sm"
-          colorScheme={copySuccess ? "green" : "blue"}
-          onClick={copyResults}
-        >
-          {copySuccess ? "Copied!" : "Copy Results"}
-        </Chakra.Button>
-        <Chakra.Button
-          size="sm"
-          colorScheme="purple"
-          onClick={saveToHistory}
-        >
-          Save to History
-        </Chakra.Button>
-      </Chakra.VStack>
-    </Chakra.Alert>
+    <ResultCard
+      stats={[{
+        label: result.type,
+        value: result.value > 0 ? result.value.toFixed(2) : 'N/A',
+        unit: result.unit,
+        note: units === 'imperial' && result.kW > 0 ? `(${result.kW.toFixed(0)} kW)` : null,
+      }]}
+      details={(
+        <Chakra.Text>
+          Based on:
+          <br />Fire Location: {location.label}
+          {calculateMode !== 'heatRelease' && (
+            <><br />Heat Release Rate: {heatRelease} {units === 'SI' ? 'kW' : 'BTU/s'}</>
+          )}
+          {location.usesSize && calculateMode !== 'diameter' && (
+            <><br />{location.sizeName}: {diameter} {units === 'SI' ? 'm' : 'ft'}</>
+          )}
+          {calculateMode !== 'flameHeight' && (
+            <><br />Flame Height: {flameHeight} {units === 'SI' ? 'm' : 'ft'}</>
+          )}
+        </Chakra.Text>
+      )}
+      onCopy={copyResults}
+      copySuccess={copySuccess}
+      onSave={saveToHistory}
+      actions={calculateMode === 'heatRelease' ? <SendHRRMenu kW={result.kW} from="Flame Height" exclude="flameHeight" /> : null}
+    />
   )
 )}
         {/* Ceiling check (NFPA 921 5.6.4.7) */}
@@ -570,11 +559,6 @@ const FlameHeightCalculator = () => {
             </Chakra.Alert>
           );
         })()}
-        {calculateMode === 'heatRelease' && result && !result.error && (
-        <Chakra.Flex justify="flex-end">
-          <SendHRRMenu kW={result.kW} from="Flame Height" exclude="flameHeight" />
-        </Chakra.Flex>
-        )}
         {result && !result.error && <ShowWork steps={result.steps} />}
  {/* Visual Flame Height Indicator */}
         {calculateMode === 'flameHeight' && result && !result.error && result.value > 0 && (

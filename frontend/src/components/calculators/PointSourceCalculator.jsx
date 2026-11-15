@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
 import EquationCard from '../EquationCard';
+import ResultCard from '../ResultCard';
+import ScrollableTabList from '../ScrollableTabList';
 import { pointSourceFlux, pointSourceFluxSI, radiusForFluxSI } from '../../calculations/pointSource.js';
 import { DEFAULT_UNITS, convertInput, toSI, fromSI } from '../../calculations/units.js';
 import ShowWork from '../ShowWork';
@@ -566,41 +568,28 @@ const PointSourceCalculator = () => {
 
         {result && (
           <Chakra.VStack spacing={4} width="100%">
-            <Chakra.Alert status="success">
-              <Chakra.AlertIcon />
-              <Chakra.Box flex="1">
-                <Chakra.VStack align="start" spacing={2}>
-                  <Chakra.Text fontWeight="bold">
-                    Radiative Heat Flux: {result.toFixed(2)} {units === 'SI' ? 'kW/m²' : `BTU/ft²/s (${resultKW.toFixed(2)} kW/m²)`}
-                  </Chakra.Text>
-                  <Chakra.Text fontSize="sm">
-                    Based on:
-                    <br />
-                    Heat Release Rate: {heatRelease} {units === 'SI' ? 'kW' : 'BTU/s'}
-                    <br />
-                    Distance from fire center: {effectiveDistance} {units === 'SI' ? 'm' : 'ft'}
-                    <br />
-                    Radiative Fraction: {radiativeFraction} ({(parseFloat(radiativeFraction) * 100).toFixed(0)}%)
-                  </Chakra.Text>
-                </Chakra.VStack>
-              </Chakra.Box>
-              <Chakra.VStack>
-                <Chakra.Button
-                  size="sm"
-                  colorScheme={copySuccess ? "green" : "blue"}
-                  onClick={copyResults}
-                >
-                  {copySuccess ? "Copied!" : "Copy Results"}
-                </Chakra.Button>
-                <Chakra.Button
-                  size="sm"
-                  colorScheme="purple"
-                  onClick={saveToHistory}
-                >
-                  Save to History
-                </Chakra.Button>
-              </Chakra.VStack>
-            </Chakra.Alert>
+            <ResultCard
+              stats={[{
+                label: 'Radiative Heat Flux',
+                value: result.toFixed(2),
+                unit: units === 'SI' ? 'kW/m²' : 'BTU/ft²/s',
+                note: units === 'SI' ? null : `(${resultKW.toFixed(2)} kW/m²)`,
+              }]}
+              details={(
+                <Chakra.Text>
+                  Based on:
+                  <br />
+                  Heat Release Rate: {heatRelease} {units === 'SI' ? 'kW' : 'BTU/s'}
+                  <br />
+                  Distance from fire center: {effectiveDistance} {units === 'SI' ? 'm' : 'ft'}
+                  <br />
+                  Radiative Fraction: {radiativeFraction} ({(parseFloat(radiativeFraction) * 100).toFixed(0)}%)
+                </Chakra.Text>
+              )}
+              onCopy={copyResults}
+              copySuccess={copySuccess}
+              onSave={saveToHistory}
+            />
             <Chakra.Box width="100%"><ShowWork steps={resultSteps} /></Chakra.Box>
 
             <Chakra.Card width="100%">
@@ -649,10 +638,10 @@ const PointSourceCalculator = () => {
             </Chakra.AccordionButton>
             <Chakra.AccordionPanel>
               <Chakra.Tabs>
-                <Chakra.TabList>
+                <ScrollableTabList>
                   <Chakra.Tab fontSize={{ base: "sm", sm: "md" }}>Radiative Fractions</Chakra.Tab>
                   <Chakra.Tab fontSize={{ base: "sm", sm: "md" }}>Common Heat Release Rates</Chakra.Tab>
-                </Chakra.TabList>
+                </ScrollableTabList>
                 <Chakra.TabPanels>
                   <Chakra.TabPanel>
                     <Chakra.VStack align="start" spacing={2}>

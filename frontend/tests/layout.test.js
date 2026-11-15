@@ -78,3 +78,78 @@ test('all five calculators share one column and the flashover caution is a warni
   // The caution lives in the callout, not buried in the description sentence.
   assert.ok(!/DO NOT USE IN A ROOM/.test(app));
 });
+
+// ---------- second pass: tab strip, result card, Flashover form ----------
+
+import { centerTabLeft, fadeMask, hiddenEdges } from '../src/tabFade.js';
+import { RESULT_BUTTON } from '../src/resultButtons.js';
+
+test('the tab strip fades only the edges that have tabs hidden beyond them', () => {
+  assert.equal(fadeMask({ left: false, right: false }), 'none');
+  assert.match(fadeMask({ left: false, right: true }), /^linear-gradient\(to left, transparent, #000 32px\)$/);
+  assert.match(fadeMask({ left: true, right: false }), /^linear-gradient\(to right, transparent, #000 32px\)$/);
+  const both = fadeMask({ left: true, right: true });
+  assert.ok(both.startsWith('linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent'), both);
+});
+
+test('hidden edges follow the scroll position (phone: 351px visible of 884px)', () => {
+  assert.deepEqual(hiddenEdges({ scrollLeft: 0, clientWidth: 351, scrollWidth: 884 }), { left: false, right: true });
+  assert.deepEqual(hiddenEdges({ scrollLeft: 200, clientWidth: 351, scrollWidth: 884 }), { left: true, right: true });
+  assert.deepEqual(hiddenEdges({ scrollLeft: 533, clientWidth: 351, scrollWidth: 884 }), { left: true, right: false });
+  // Everything fits (desktop): no fades. One pixel of rounding noise is ignored.
+  assert.deepEqual(hiddenEdges({ scrollLeft: 0, clientWidth: 900, scrollWidth: 900 }), { left: false, right: false });
+  assert.deepEqual(hiddenEdges({ scrollLeft: 1, clientWidth: 900, scrollWidth: 901 }), { left: false, right: false });
+});
+
+test('the selected tab is centred in the strip, but never scrolled past the start', () => {
+  assert.equal(centerTabLeft({ tabLeft: 500, tabWidth: 100, clientWidth: 300 }), 400);
+  assert.equal(centerTabLeft({ tabLeft: 0, tabWidth: 100, clientWidth: 300 }), 0);
+});
+
+test('both tab strips (main tabs and Reference sub-tabs) use ScrollableTabList', () => {
+  assert.match(read('App.jsx'), /<ScrollableTabList>/);
+  assert.match(read('components/reference/ReferenceGuide.jsx'), /<ScrollableTabList\b/);
+  const stragglers = jsxFiles(SRC.slice(0, -1))
+    .filter((file) => !file.endsWith('ScrollableTabList.jsx'))
+    .filter((file) => /<Chakra\.TabList\b/.test(readFileSync(file, 'utf8')))
+    .map((file) => file.replace(SRC, 'src/'));
+  assert.deepEqual(stragglers, []);
+});
+
+test('every calculator shows its answer in the shared ResultCard with one button style', () => {
+  for (const name of ['HeatRelease', 'FlameHeight', 'PointSource', 'Flashover', 'TSquared']) {
+    const source = read(`components/calculators/${name}Calculator.jsx`);
+    assert.match(source, /import ResultCard from '..\/ResultCard'/, name);
+    assert.match(source, /<ResultCard\b/, name);
+    assert.ok(!/Copy Results|Save to History/.test(source), `${name} should not build its own Copy / Save buttons`);
+  }
+  // No purple or teal action buttons anywhere: Copy, Save and "Use this HRR in…" are all outline blue.
+  const strays = jsxFiles(SRC.slice(0, -1))
+    .filter((file) => /colorScheme="(purple|teal)"/.test(readFileSync(file, 'utf8')))
+    .map((file) => file.replace(SRC, 'src/'));
+  assert.deepEqual(strays, []);
+  const card = read('components/ResultCard.jsx');
+  assert.match(card, /Copy Results/);
+  assert.match(card, /Save to History/);
+});
+
+test('"Use this HRR in…" sits in the result card row, in the same style', () => {
+  assert.match(read('components/HrrTransfer.jsx'), /\{\.\.\.RESULT_BUTTON\}/);
+  assert.match(read('components/ResultCard.jsx'), /\{\.\.\.RESULT_BUTTON\}/);
+  assert.equal(RESULT_BUTTON.variant, 'outline');
+  assert.equal(RESULT_BUTTON.colorScheme, 'blue');
+  assert.deepEqual(RESULT_BUTTON.width, { base: '100%', sm: 'auto' }); // stacked full-width on phones
+  for (const name of ['HeatRelease', 'FlameHeight', 'TSquared']) {
+    const source = read(`components/calculators/${name}Calculator.jsx`);
+    assert.match(source, /actions=\{.*<SendHRRMenu/, name);
+    assert.ok(!/<Chakra\.Flex justify="flex-end">\s*<SendHRRMenu/.test(source), `${name}: menu should be inside the card`);
+  }
+});
+
+test('Flashover groups its five length inputs into room dimensions and ventilation opening', () => {
+  const source = read('components/calculators/FlashoverCalculator.jsx');
+  assert.match(source, /Room dimensions/);
+  assert.match(source, /Ventilation opening/);
+  assert.equal((source.match(/dimensionField\('/g) || []).length, 5);
+  assert.equal((source.match(/<Chakra\.SimpleGrid columns=\{\{ base: 2, sm: 3 \}\}/g) || []).length, 2);
+});
