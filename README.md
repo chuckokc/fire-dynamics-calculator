@@ -34,18 +34,30 @@ two Netlify Edge Functions in `frontend/netlify/edge-functions/`. Until a
 visitor enters the code, Netlify sends them only the login page. None of the
 app's files are served, and the code is not in this repo or in the app.
 
-- **The code** is the `ACCESS_CODE` environment variable in Netlify (Project
+- **The codes** are the `ACCESS_CODE` environment variable in Netlify (Project
   configuration > Environment variables). Set it for all deploy contexts
   (production and deploy previews). Do not tick "Contains secret values":
   Netlify's secret scanner fails the build if a short code word appears
-  anywhere in the app or the docs. Codes are not case-sensitive.
-- **To change the code**, edit `ACCESS_CODE` in Netlify, then trigger a new
+  anywhere in the app or the docs. It can hold several codes separated by
+  commas, and a code can end with `until YYYY-MM-DD`, after which it stops
+  working at the end of that day (U.S. Central time). For example:
+  `first phrase until 2027-05-14, second phrase`. Capitals and extra spaces
+  do not matter; a code cannot contain a comma.
+- **To change the codes**, edit `ACCESS_CODE` in Netlify, then trigger a new
   deploy (Deploys > Trigger deploy > Deploy site). Netlify reads the value
-  when it builds, so the old code keeps working until that deploy finishes.
-  After that everyone is signed out. Phones and computers that have the app
-  installed are cleared and asked for the new code the next time they are
-  online and open it. A device that stays offline keeps its cached copy until
-  it next connects.
+  when it builds, so the old setting keeps working until that deploy
+  finishes. End dates are checked on every request, so a code stops working
+  at its end date without another deploy.
+- **A session belongs to the code that opened it.** When a code reaches its end
+  date or is removed from the list, the people who signed in with it are
+  signed out, and everyone signed in with another code carries on. Adding a
+  code signs nobody out. Phones and computers with the app installed are
+  cleared and asked for a code the next time they are online and open it. A
+  device that stays offline keeps its cached copy until it next connects.
+- **If every code has ended**, the login page says the codes have expired and
+  nobody can sign in. A date that does not exist (such as 2027-02-31) causes
+  that code to be left out, so after changing `ACCESS_CODE` always check the
+  login on the new deploy.
 - **Sessions** last 180 days and renew whenever the app is opened online.
 - **If `ACCESS_CODE` is missing** the site shows "Almost ready" and serves
   nothing else (it fails closed).
@@ -54,11 +66,37 @@ app's files are served, and the code is not in this repo or in the app.
   single common word.
 - `npm run dev` does not run the Edge Functions, so the local dev server is
   not gated.
-- The login page has an "Email Chuck to request one" link. It opens the
-  visitor's email app with a message to the creator, ready to fill in with their
-  name and agency or class. The address is also shown as plain text for people
-  without an email app set up.
-- Public on purpose: the login page, the install manifest and the icons.
+- The login page has a **Don't have a code? Request one** form (name, email,
+  agency/school/class, how they heard) and a **Send feedback** form; the app's
+  **Provide Feedback** button opens the same kind of form. They are stored by
+  Netlify Forms, which emails the site owner, so nobody needs an email app and
+  the owner's address is not on the site. See "Request and feedback forms" below.
+- Public on purpose: the login page, the install manifest, the icons and
+  `/forms.html` (where the forms are posted by people who have no code yet).
+
+## Request and feedback forms
+
+Requests for a code and feedback go through Netlify Forms (free plan: about 100
+submissions a month, and Netlify's spam filter plus a hidden trap field keep bots
+out). To work, they need:
+
+1. **Form detection turned on** (Netlify: Forms, then Enable form detection). It is
+   on for this site.
+2. **`frontend/public/forms.html`**, a hidden page that lists both forms. Netlify
+   reads it at deploy time. The login page and the app post to it. If you add or
+   rename a field, change it here, on the login page
+   (`netlify/edge-functions/lib/access.js`) and in `src/sendForm.js` /
+   `src/components/FeedbackModal.jsx`; `tests/forms.test.js` fails if they disagree.
+3. **An email notification**, so you hear about each submission (Netlify: Forms,
+   then Submission notifications, then Add notification, then Email notification;
+   pick one form or all forms). Not the Deploy notifications page under Project
+   configuration: email is a paid option there. The recipient must be a member of
+   your Netlify team, or confirm a one-time email Netlify sends them. Netlify
+   sends these from `formresponses@netlify.com`; both forms have a field named
+   `email`, which Netlify uses as the reply-to address so Reply goes to the
+   person who filled in the form. Keep a field named `email` in any form you add.
+
+Requests and feedback are also listed under Forms in Netlify.
 
 ## Checks
 
