@@ -74,9 +74,17 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
     setShowHistory(false);
   };
 
+  // The result is live: it follows the inputs, so it is cleared whenever they are
+  // incomplete or give no answer, and never left showing numbers for a different form.
+  const clearResult = () => {
+    setResult(null);
+    setResultKW(null);
+    setResultSteps(null);
+  };
+
   // Calculation function
   const calculateHeatRelease = () => {
-    if (!material || !burningArea) return;
+    if (!material || !burningArea) return clearResult();
     const materialProps = MATERIAL_PROPERTIES[material];
     const r = heatReleaseRate({
       massFlux: materialProps.massFlux || parseFloat(manualMassFlux),
@@ -84,7 +92,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
       area: parseFloat(burningArea),
       units
     });
-    if (!r) return;
+    if (!r) return clearResult();
     setResult(r.value);
     setResultKW(r.kW);
     setResultSteps(r.steps);
@@ -145,6 +153,8 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
   useEffect(() => {
     if (material && burningArea && (MATERIAL_PROPERTIES[material]?.massFlux || manualMassFlux)) {
       calculateHeatRelease();
+    } else {
+      clearResult();
     }
   }, [material, burningArea, manualMassFlux, units]);
   
@@ -276,14 +286,6 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
             </Chakra.Text>
           </Chakra.VStack>
         </Chakra.FormControl>
-
-        <Chakra.Button
-          colorScheme="blue"
-          onClick={calculateHeatRelease}
-          isDisabled={!material || !burningArea || (needsMassFluxInput && !manualMassFlux)}
-        >
-          Calculate Heat Release Rate
-        </Chakra.Button>
 
         {/* Add history toggle button */}
         {calculationHistory.length > 0 && (

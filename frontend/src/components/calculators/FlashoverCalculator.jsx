@@ -118,6 +118,9 @@ const FlashoverCalculator = () => {
   useEffect(() => {
     if (roomHeight && roomWidth && roomLength && openingHeight && openingWidth) {
       calculateFlashover();
+    } else {
+      // Live result: nothing is shown until all five sizes are entered.
+      setResults(null);
     }
   }, [roomHeight, roomWidth, roomLength, openingHeight, openingWidth, surfaceMaterial, units]);
 
@@ -319,14 +322,6 @@ const FlashoverCalculator = () => {
             </Chakra.CardBody>
           </Chakra.Card>
         )}
-
-        <Chakra.Button
-          colorScheme="blue"
-          onClick={calculateFlashover}
-          isDisabled={!roomHeight || !roomWidth || !roomLength || !openingHeight || !openingWidth}
-        >
-          Calculate Flashover Conditions
-        </Chakra.Button>
 
         {results && (
           <ResultCard
