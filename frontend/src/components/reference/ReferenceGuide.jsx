@@ -138,7 +138,7 @@ const ReferenceGuide = () => {
   return (
     <Chakra.Box p={{ base: 3, md: 6 }} maxW="6xl" mx="auto" w="100%" overflow="hidden">
       <Chakra.VStack spacing={6} align="stretch">
-        <Chakra.Text fontSize="sm" color="gray.600" sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+        <Chakra.Text fontSize="sm" color="fd.muted" sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
           Fire Dynamics Calculator equations (U.S. Nuclear Regulatory Commission, 2013) and data compiled from:
           <Chakra.UnorderedList>
           <Chakra.ListItem>U.S. Nuclear Regulatory Commission. (2013). Fire dynamics tools (FDTs): Quantitative fire hazard analysis methods for the U.S. Nuclear Regulatory Commission fire protection inspection program (NUREG-1805, Supplement 1, Volumes 1 & 2). Office of Nuclear Reactor Research. https://www.nrc.gov/reading-rm/doc-collections/nuregs/staff/sr1805/s1/index.html.</Chakra.ListItem>
@@ -302,7 +302,7 @@ const ReferenceGuide = () => {
                   <Chakra.Text fontSize="md" fontWeight="bold" mb={2}>
                     Growth Times of Continuous-Growth Fires
                   </Chakra.Text>
-                  <Chakra.Text fontSize="sm" color="gray.600" mb={2}>
+                  <Chakra.Text fontSize="sm" color="fd.muted" mb={2}>
                     Time to reach 1 MW assuming 100% combustion efficiency
                   </Chakra.Text>
                   <Chakra.TableContainer whiteSpace="normal" maxW="100%"><Chakra.Table variant="simple" size="sm">
@@ -321,12 +321,12 @@ const ReferenceGuide = () => {
                       ))}
                     </Chakra.Tbody>
                   </Chakra.Table></Chakra.TableContainer>
-                  <Chakra.Text fontSize="xs" color="gray.500" mt={2}>
+                  <Chakra.Text fontSize="xs" color="fd.muted" mt={2}>
                     Note: Pe = polyester; Cot = cotton; PE = polyethylene; PS = polystyrene; 
                     PVC = polyvinyl chloride; PP = polypropylene; PU = polyurethane; 
                     FRP = fiberglass-reinforced polyester. For SI units: 1 ft = 0.305 m.
                   </Chakra.Text>
-                  <Chakra.Text fontSize="xs" color="gray.500" mt={1}>
+                  <Chakra.Text fontSize="xs" color="fd.muted" mt={1}>
                     Source: NFPA Fire Protection Handbook, 2016 ed., Section 18, Chapter 4
                   </Chakra.Text>
                 </Chakra.Box>

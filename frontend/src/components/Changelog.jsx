@@ -55,7 +55,7 @@ const Changelog = () => {
                     <Chakra.Text fontWeight="bold" fontSize="lg">
                       Version {release.version}
                     </Chakra.Text>
-                    <Chakra.Text fontSize="sm" color="gray.500">
+                    <Chakra.Text fontSize="sm" color="fd.muted">
                       {release.date}
                     </Chakra.Text>
                   </Chakra.VStack>
@@ -64,7 +64,7 @@ const Changelog = () => {
                   {release.features.map((feature, idx) => (
                     <Chakra.Box key={idx}>
                       <Chakra.Text fontWeight="semibold">{feature.title}</Chakra.Text>
-                      <Chakra.Text fontSize="sm" color="gray.600">
+                      <Chakra.Text fontSize="sm" color="fd.muted">
                         {feature.description}
                       </Chakra.Text>
                     </Chakra.Box>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
+import EquationCard from '../EquationCard';
 import { FIRE_LOCATIONS, solveFlameHeight } from '../../calculations/flameHeight.js';
 import { DEFAULT_UNITS, convertInput, toSI, fromSI } from '../../calculations/units.js';
 import { fmt } from '../../calculations/work.js';
@@ -151,7 +152,7 @@ const FlameHeightVisual = ({ flameHeight, units, ceilingM }) => {
         />
       </Chakra.Box>
       
-      <Chakra.Text fontSize="xs" color="gray.600" mt={2} textAlign="center">
+      <Chakra.Text fontSize="xs" color="fd.muted" mt={2} textAlign="center">
         Scale: 0 to {units === 'imperial' ? '32.8 ft' : '10 m'}
       </Chakra.Text>
     </Chakra.Box>
@@ -283,39 +284,36 @@ const FlameHeightCalculator = () => {
   };
 
   return (
-    <Chakra.Box p={6} maxW="2xl" mx="auto">
+    <Chakra.Box p={{ base: 4, sm: 6 }} maxW="2xl" mx="auto">
       <Chakra.VStack spacing={6} align="stretch">
-        <Chakra.Card variant="outline">
-          <Chakra.CardBody>
-            <Chakra.Text fontSize="lg" fontWeight="bold">{location.method}:</Chakra.Text>
-            <Chakra.Text fontSize="xl" fontFamily="mono">
-              {location.equation}
-            </Chakra.Text>
-            <Chakra.Text fontSize="sm" color="gray.600" mt={2}>
-              Where:
-              <br />
-              L = Flame height (m or ft)
-              <br />
-              Q̇ = Heat release rate (kW or BTU/s)
-              {location.usesSize && (
-                <>
-                  <br />
-                  {location.sizeSymbol} = {location.sizeDescription} (m or ft)
-                </>
-              )}
-            </Chakra.Text>
-            {!location.usesSize && (
-              <Chakra.Text fontSize="sm" color="gray.600" mt={2}>
-                This correlation depends only on the heat release rate, so no fire size is entered.
-              </Chakra.Text>
+        <EquationCard
+          title={`${location.method}:`}
+          equation={location.equation}
+        >
+          <Chakra.Text fontSize="sm" color="fd.muted" mt={2}>
+            Where:
+            <br />
+            L = Flame height (m or ft)
+            <br />
+            Q̇ = Heat release rate (kW or BTU/s)
+            {location.usesSize && (
+              <>
+                <br />
+                {location.sizeSymbol} = {location.sizeDescription} (m or ft)
+              </>
             )}
-            {location.nfpaNote && (
-              <Chakra.Text fontSize="sm" color="gray.600" mt={3} fontStyle="italic">
-                {location.nfpaNote}
-              </Chakra.Text>
-            )}
-          </Chakra.CardBody>
-        </Chakra.Card>
+          </Chakra.Text>
+          {!location.usesSize && (
+            <Chakra.Text fontSize="sm" color="fd.muted" mt={2}>
+              This correlation depends only on the heat release rate, so no fire size is entered.
+            </Chakra.Text>
+          )}
+          {location.nfpaNote && (
+            <Chakra.Text fontSize="sm" color="fd.muted" mt={3} fontStyle="italic">
+              {location.nfpaNote}
+            </Chakra.Text>
+          )}
+        </EquationCard>
 
         {/* Fire Location */}
         <Chakra.FormControl>
@@ -356,7 +354,7 @@ const FlameHeightCalculator = () => {
             >
               <Chakra.NumberInputField inputMode="decimal" />
             </Chakra.NumberInput>
-            <Chakra.Text fontSize="sm" color="gray.600">
+            <Chakra.Text fontSize="sm" color="fd.muted">
               {units === 'SI' ? 'kW' : 'BTU/s'}
             </Chakra.Text>
           </Chakra.FormControl>
@@ -372,7 +370,7 @@ const FlameHeightCalculator = () => {
             >
               <Chakra.NumberInputField inputMode="decimal" />
             </Chakra.NumberInput>
-            <Chakra.Text fontSize="sm" color="gray.600">
+            <Chakra.Text fontSize="sm" color="fd.muted">
               {units === 'SI' ? 'm' : 'ft'}
             </Chakra.Text>
           </Chakra.FormControl>
@@ -388,7 +386,7 @@ const FlameHeightCalculator = () => {
             >
               <Chakra.NumberInputField inputMode="decimal" />
             </Chakra.NumberInput>
-            <Chakra.Text fontSize="sm" color="gray.600">
+            <Chakra.Text fontSize="sm" color="fd.muted">
               {units === 'SI' ? 'm' : 'ft'}
             </Chakra.Text>
           </Chakra.FormControl>
@@ -404,7 +402,7 @@ const FlameHeightCalculator = () => {
             >
               <Chakra.NumberInputField inputMode="decimal" />
             </Chakra.NumberInput>
-            <Chakra.Text fontSize="sm" color="gray.600">
+            <Chakra.Text fontSize="sm" color="fd.muted">
               {units === 'SI' ? 'm' : 'ft'}, from the base of the fire to the ceiling. Checks whether the flames reach it.
             </Chakra.Text>
           </Chakra.FormControl>
@@ -424,7 +422,7 @@ const FlameHeightCalculator = () => {
               </Chakra.HStack>
             </Chakra.RadioGroup>
             
-            <Chakra.Text fontSize="xs" color="gray.500">
+            <Chakra.Text fontSize="xs" color="fd.muted">
               Switching units converts the values already entered.
             </Chakra.Text>
           </Chakra.VStack>
@@ -474,10 +472,10 @@ const FlameHeightCalculator = () => {
                         <Chakra.Text fontSize="sm" fontWeight="medium">
                           {entry.result.type}
                         </Chakra.Text>
-                        <Chakra.Text fontSize="xs" color="gray.600">
+                        <Chakra.Text fontSize="xs" color="fd.muted">
                           {entry.timestamp}
                         </Chakra.Text>
-                        <Chakra.Text fontSize="xs" color="gray.500">
+                        <Chakra.Text fontSize="xs" color="fd.muted">
                           {FIRE_LOCATIONS[entry.fireLocation || 'center'].label} • Mode: {entry.calculateMode === 'flameHeight' ? 'Height' :
                                 entry.calculateMode === 'heatRelease' ? 'HRR' : 'Size'}
                         </Chakra.Text>
@@ -486,7 +484,7 @@ const FlameHeightCalculator = () => {
                         <Chakra.Text fontSize="sm" fontWeight="bold">
                           {entry.result.value.toFixed(2)} {entry.result.unit}
                         </Chakra.Text>
-                        <Chakra.Text fontSize="xs" color="gray.600">
+                        <Chakra.Text fontSize="xs" color="fd.muted">
                           {entry.units === 'SI' ? 'SI Units' : 'Imperial'}
                         </Chakra.Text>
                       </Chakra.VStack>

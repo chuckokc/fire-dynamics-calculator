@@ -37,7 +37,7 @@ const ShowWork = ({ steps, title = 'Show the work' }) => {
               </Chakra.ListItem>
             ))}
           </Chakra.OrderedList>
-          <Chakra.Text fontSize="xs" color="gray.500" mt={3}>
+          <Chakra.Text fontSize="xs" color="fd.muted" mt={3}>
             The equations are worked in SI units (kW, m). Imperial inputs are converted first and the answer converted back.
             Numbers are rounded for display; the calculator uses full precision.
           </Chakra.Text>

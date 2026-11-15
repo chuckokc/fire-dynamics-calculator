@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
+import EquationCard from '../EquationCard';
 import { pointSourceFlux, pointSourceFluxSI, radiusForFluxSI } from '../../calculations/pointSource.js';
 import { DEFAULT_UNITS, convertInput, toSI, fromSI } from '../../calculations/units.js';
 import ShowWork from '../ShowWork';
@@ -143,7 +144,7 @@ const RadiationZoneVisual = ({ heatRelease, distance, radiativeFraction, units }
             borderRadius="md" 
             boxShadow="md"
           >
-            <Chakra.Text fontSize={{ base: "10px", sm: "xs" }} color="gray.600">
+            <Chakra.Text fontSize={{ base: "10px", sm: "xs" }} color="fd.muted">
               Distance: {distance} {units === 'imperial' ? 'ft' : 'm'}
             </Chakra.Text>
           </Chakra.Box>
@@ -181,7 +182,7 @@ const RadiationZoneVisual = ({ heatRelease, distance, radiativeFraction, units }
                   <Chakra.Text fontSize={{ base: "10px", sm: "11px" }} fontWeight="medium">
                     {zone.flux} kW/m² - {zone.name}
                     {zone.flux === 5 && (
-                      <Chakra.Text as="span" fontSize={{ base: "9px", sm: "10px" }} color="gray.600">
+                      <Chakra.Text as="span" fontSize={{ base: "9px", sm: "10px" }} color="fd.muted">
                         {' '}(lens damage)
                       </Chakra.Text>
                     )}
@@ -362,27 +363,24 @@ const PointSourceCalculator = () => {
   return (
     <Chakra.Box p={{ base: 4, sm: 6 }} maxW="2xl" mx="auto">
       <Chakra.VStack spacing={{ base: 4, sm: 6 }} align="stretch">
-        <Chakra.Card variant="outline">
-          <Chakra.CardBody>
-            <Chakra.Text fontSize={{ base: "md", sm: "lg" }} fontWeight="bold">Point Source Radiation Model:</Chakra.Text>
-            <Chakra.Text fontSize={{ base: "lg", sm: "xl" }} fontFamily="mono">
-              q" = (Q̇ × χᵣ) / (4π × R²)
-            </Chakra.Text>
-            <Chakra.Text fontSize="sm" color="gray.600" mt={2}>
-              Where:
-              <br />
-              q" = Radiative heat flux at target (kW/m² or BTU/ft²/s)
-              <br />
-              Q̇ = Total heat release rate (kW or BTU/s)
-              <br />
-              χᵣ = Radiative fraction (typical value 0.3)
-              <br />
-              R = Distance from the center of the fire to the target (m or ft)
-              <br />
-              π = Pi (approximately 3.14159)
-            </Chakra.Text>
-          </Chakra.CardBody>
-        </Chakra.Card>
+        <EquationCard
+          title="Point Source Radiation Model:"
+          equation={<>q" = (Q̇ × χᵣ) / (4π × R²)</>}
+        >
+          <Chakra.Text fontSize="sm" color="fd.muted" mt={2}>
+            Where:
+            <br />
+            q" = Radiative heat flux at target (kW/m² or BTU/ft²/s)
+            <br />
+            Q̇ = Total heat release rate (kW or BTU/s)
+            <br />
+            χᵣ = Radiative fraction (typical value 0.3)
+            <br />
+            R = Distance from the center of the fire to the target (m or ft)
+            <br />
+            π = Pi (approximately 3.14159)
+          </Chakra.Text>
+        </EquationCard>
 
         <Chakra.FormControl isRequired>
           <Chakra.FormLabel>Heat Release Rate</Chakra.FormLabel>
@@ -393,7 +391,7 @@ const PointSourceCalculator = () => {
           >
             <Chakra.NumberInputField inputMode="decimal" />
           </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="gray.600">
+          <Chakra.Text fontSize="sm" color="fd.muted">
             {units === 'SI' ? 'kW' : 'BTU/s'}
           </Chakra.Text>
         </Chakra.FormControl>
@@ -418,7 +416,7 @@ const PointSourceCalculator = () => {
           >
             <Chakra.NumberInputField inputMode="decimal" />
           </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="gray.600">
+          <Chakra.Text fontSize="sm" color="fd.muted">
             {units === 'SI' ? 'm' : 'ft'}, measured from the center of the fire (edge distance + ½ fire diameter)
           </Chakra.Text>
         </Chakra.FormControl>
@@ -429,17 +427,17 @@ const PointSourceCalculator = () => {
               <Chakra.NumberInput value={edgeDistance} onChange={(vs) => setEdgeDistance(vs)} min={0}>
                 <Chakra.NumberInputField inputMode="decimal" />
               </Chakra.NumberInput>
-              <Chakra.Text fontSize="sm" color="gray.600">{units === 'SI' ? 'm' : 'ft'}</Chakra.Text>
+              <Chakra.Text fontSize="sm" color="fd.muted">{units === 'SI' ? 'm' : 'ft'}</Chakra.Text>
             </Chakra.FormControl>
             <Chakra.FormControl isRequired>
               <Chakra.FormLabel>Fire Diameter (D)</Chakra.FormLabel>
               <Chakra.NumberInput value={fireDiameter} onChange={(vs) => setFireDiameter(vs)} min={0}>
                 <Chakra.NumberInputField inputMode="decimal" />
               </Chakra.NumberInput>
-              <Chakra.Text fontSize="sm" color="gray.600">{units === 'SI' ? 'm' : 'ft'}</Chakra.Text>
+              <Chakra.Text fontSize="sm" color="fd.muted">{units === 'SI' ? 'm' : 'ft'}</Chakra.Text>
             </Chakra.FormControl>
             {effectiveDistance && (
-              <Chakra.Text fontSize="sm" color="gray.600" gridColumn={{ sm: 'span 2' }}>
+              <Chakra.Text fontSize="sm" color="fd.muted" gridColumn={{ sm: 'span 2' }}>
                 R = L + D/2 = {effectiveDistance} {units === 'SI' ? 'm' : 'ft'} from the center of the fire
               </Chakra.Text>
             )}
@@ -457,7 +455,7 @@ const PointSourceCalculator = () => {
           >
             <Chakra.NumberInputField inputMode="decimal" />
           </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="gray.600">
+          <Chakra.Text fontSize="sm" color="fd.muted">
             Typical value: 0.3 (30% of total energy)
           </Chakra.Text>
         </Chakra.FormControl>
@@ -475,7 +473,7 @@ const PointSourceCalculator = () => {
               </Chakra.HStack>
             </Chakra.RadioGroup>
             
-            <Chakra.Text fontSize="xs" color="gray.500">
+            <Chakra.Text fontSize="xs" color="fd.muted">
               Switching units converts the values already entered.
             </Chakra.Text>
           </Chakra.VStack>
@@ -534,10 +532,10 @@ const PointSourceCalculator = () => {
                           <Chakra.Text fontSize="sm" fontWeight="medium">
                             {entry.result.toFixed(2)} {entry.units === 'SI' ? 'kW/m²' : 'BTU/ft²/s'}
                           </Chakra.Text>
-                          <Chakra.Text fontSize="xs" color="gray.600">
+                          <Chakra.Text fontSize="xs" color="fd.muted">
                             {entry.timestamp}
                           </Chakra.Text>
-                          <Chakra.Text fontSize="xs" color="gray.500">
+                          <Chakra.Text fontSize="xs" color="fd.muted">
                             @ {entry.distance} {entry.units === 'SI' ? 'm' : 'ft'}
                           </Chakra.Text>
                         </Chakra.VStack>
@@ -545,7 +543,7 @@ const PointSourceCalculator = () => {
                           <Chakra.Text fontSize="sm" fontWeight="bold">
                             {entry.heatRelease} {entry.units === 'SI' ? 'kW' : 'BTU/s'}
                           </Chakra.Text>
-                          <Chakra.Text fontSize="xs" color="gray.600">
+                          <Chakra.Text fontSize="xs" color="fd.muted">
                             χᵣ = {entry.radiativeFraction}
                           </Chakra.Text>
                         </Chakra.VStack>
