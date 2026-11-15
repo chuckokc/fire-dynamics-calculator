@@ -3,9 +3,10 @@ import * as Chakra from '@chakra-ui/react';
 import EquationCard from '../EquationCard';
 import ResultCard from '../ResultCard';
 import { FIRE_LOCATIONS, solveFlameHeight } from '../../calculations/flameHeight.js';
-import { DEFAULT_UNITS, convertInput, toSI, fromSI } from '../../calculations/units.js';
+import { DEFAULT_UNITS, FEET, M_TO_FT, convertInput, toSI, fromSI, unitLabel } from '../../calculations/units.js';
 import { fmt } from '../../calculations/work.js';
 import ShowWork from '../ShowWork';
+import UnitToggle from '../UnitToggle';
 import { SendHRRMenu, useIncomingHRR } from '../HrrTransfer';
 
 // Visual Flame Height Indicator Component
@@ -51,7 +52,7 @@ const FlameHeightVisual = ({ flameHeight, units, ceilingM }) => {
   ];
 
   // Convert flame height to meters for comparison
-  const flameHeightM = units === 'imperial' ? flameHeight * 0.3048 : flameHeight;
+  const flameHeightM = toSI(flameHeight, 'length', units);
   
   // Maximum height for scaling (meters)
   const maxHeight = 10;
@@ -67,10 +68,8 @@ const FlameHeightVisual = ({ flameHeight, units, ceilingM }) => {
         {/* Reference lines */}
         {references.map((ref, index) => {
           const refPercent = (ref.heightM / maxHeight) * 100;
-          const heightValue = units === 'imperial' ? 
-            (ref.heightM * 3.28084).toFixed(1) : 
-            ref.heightM.toFixed(1);
-          const unitLabel = units === 'imperial' ? 'ft' : 'm';
+          const heightValue = fromSI(ref.heightM, 'length', units).toFixed(1);
+          const refUnit = unitLabel('length', units);
           
           // Parse line style
           const [lineWidth, lineType] = ref.lineStyle.split(' ');
@@ -99,7 +98,7 @@ const FlameHeightVisual = ({ flameHeight, units, ceilingM }) => {
                 border="1px solid"
                 borderColor={ref.color}
               >
-                {ref.name} • {heightValue}{unitLabel}
+                {ref.name} • {heightValue}{refUnit}
               </Chakra.Text>
             </Chakra.Box>
           );
@@ -137,7 +136,7 @@ const FlameHeightVisual = ({ flameHeight, units, ceilingM }) => {
               fontWeight="bold"
               boxShadow="md"
             >
-              {flameHeight.toFixed(1)} {units === 'imperial' ? 'ft' : 'm'}
+              {flameHeight.toFixed(1)} {unitLabel('length', units)}
             </Chakra.Box>
           </Chakra.Box>
         )}
@@ -154,7 +153,7 @@ const FlameHeightVisual = ({ flameHeight, units, ceilingM }) => {
       </Chakra.Box>
       
       <Chakra.Text fontSize="xs" color="fd.muted" mt={2} textAlign="center">
-        Scale: 0 to {units === 'imperial' ? '32.8 ft' : '10 m'}
+        Scale: 0 to {units === FEET ? '32.8 ft' : '10 m'}
       </Chakra.Text>
     </Chakra.Box>
   );
@@ -179,7 +178,7 @@ const FlameHeightCalculator = () => {
   // HRR sent from another calculator: solve for flame height with it
   useIncomingHRR('flameHeight', (kW) => {
     setCalculateMode('flameHeight');
-    setHeatRelease(fromSI(kW, 'hrr', units).toFixed(2));
+    setHeatRelease(kW.toFixed(2));
   });
 
   // Corner flame height doesn't depend on fire size, so there is nothing
@@ -226,6 +225,11 @@ const FlameHeightCalculator = () => {
     setShowHistory(false);
   };
 
+  // A length answer is also shown in the other unit: "9.42 ft" with "(2.87 m)", or the reverse
+  const otherLength = result && !result.error && result.valueM > 0
+    ? (units === FEET ? `${result.valueM.toFixed(2)} m` : `${(result.valueM * M_TO_FT).toFixed(2)} ft`)
+    : null;
+
   // Calculation: equations are in src/calculations/flameHeight.js (tested)
   const calculate = () => {
     setResult(solveFlameHeight({
@@ -246,20 +250,18 @@ const FlameHeightCalculator = () => {
   copyText += `Fire Location: ${location.label}\n`;
   copyText += `Method: ${location.method} (${location.equation})\n\n`;
   copyText += `Result: ${result.value.toFixed(2)} ${result.unit}`;
-  if (units === 'imperial' && result.kW !== undefined) {
-    copyText += ` (${result.kW.toFixed(2)} kW)`;
-  }
+  if (otherLength) copyText += ` (${otherLength})`;
   copyText += `\n\n`;
   copyText += `Input Parameters:\n`;
 
   if (calculateMode !== 'heatRelease' && heatRelease) {
-    copyText += `- Heat Release Rate: ${heatRelease} ${units === 'SI' ? 'kW' : 'BTU/s'}\n`;
+    copyText += `- Heat Release Rate: ${heatRelease} kW\n`;
   }
   if (location.usesSize && calculateMode !== 'diameter' && diameter) {
-    copyText += `- ${location.sizeName}: ${diameter} ${units === 'SI' ? 'm' : 'ft'}\n`;
+    copyText += `- ${location.sizeName}: ${diameter} ${unitLabel('length', units)}\n`;
   }
   if (calculateMode !== 'flameHeight' && flameHeight) {
-    copyText += `- Flame Height: ${flameHeight} ${units === 'SI' ? 'm' : 'ft'}\n`;
+    copyText += `- Flame Height: ${flameHeight} ${unitLabel('length', units)}\n`;
   }
   
   navigator.clipboard.writeText(copyText).then(() => {
@@ -276,11 +278,10 @@ const FlameHeightCalculator = () => {
   // Switching units converts what's already entered
   const handleUnitsChange = (newUnits) => {
     if (newUnits === units) return;
-    const toImperial = newUnits === 'imperial';
-    setHeatRelease(prev => convertInput(prev, 'hrr', toImperial));
-    setDiameter(prev => convertInput(prev, 'length', toImperial));
-    setFlameHeight(prev => convertInput(prev, 'length', toImperial));
-    setCeilingHeight(prev => convertInput(prev, 'length', toImperial));
+    const toFeet = newUnits === FEET;
+    setDiameter(prev => convertInput(prev, 'length', toFeet));
+    setFlameHeight(prev => convertInput(prev, 'length', toFeet));
+    setCeilingHeight(prev => convertInput(prev, 'length', toFeet));
     setUnits(newUnits);
   };
 
@@ -296,7 +297,7 @@ const FlameHeightCalculator = () => {
             <br />
             L = Flame height (m or ft)
             <br />
-            Q̇ = Heat release rate (kW or BTU/s)
+            Q̇ = Heat release rate (kW)
             {location.usesSize && (
               <>
                 <br />
@@ -356,7 +357,7 @@ const FlameHeightCalculator = () => {
               <Chakra.NumberInputField inputMode="decimal" />
             </Chakra.NumberInput>
             <Chakra.Text fontSize="sm" color="fd.muted">
-              {units === 'SI' ? 'kW' : 'BTU/s'}
+              kW
             </Chakra.Text>
           </Chakra.FormControl>
         )}
@@ -372,7 +373,7 @@ const FlameHeightCalculator = () => {
               <Chakra.NumberInputField inputMode="decimal" />
             </Chakra.NumberInput>
             <Chakra.Text fontSize="sm" color="fd.muted">
-              {units === 'SI' ? 'm' : 'ft'}
+              {unitLabel('length', units)}
             </Chakra.Text>
           </Chakra.FormControl>
         )}
@@ -388,7 +389,7 @@ const FlameHeightCalculator = () => {
               <Chakra.NumberInputField inputMode="decimal" />
             </Chakra.NumberInput>
             <Chakra.Text fontSize="sm" color="fd.muted">
-              {units === 'SI' ? 'm' : 'ft'}
+              {unitLabel('length', units)}
             </Chakra.Text>
           </Chakra.FormControl>
         )}
@@ -404,30 +405,13 @@ const FlameHeightCalculator = () => {
               <Chakra.NumberInputField inputMode="decimal" />
             </Chakra.NumberInput>
             <Chakra.Text fontSize="sm" color="fd.muted">
-              {units === 'SI' ? 'm' : 'ft'}, from the base of the fire to the ceiling. Checks whether the flames reach it.
+              {unitLabel('length', units)}, from the base of the fire to the ceiling. Checks whether the flames reach it.
             </Chakra.Text>
           </Chakra.FormControl>
         )}
 
         {/* Unit Selection */}
-        <Chakra.FormControl>
-          <Chakra.FormLabel>Units</Chakra.FormLabel>
-          <Chakra.VStack align="start" spacing={2}>
-            <Chakra.RadioGroup 
-              value={units} 
-              onChange={handleUnitsChange}
-            >
-              <Chakra.HStack spacing={4}>
-                <Chakra.Radio value="SI">SI (m, kW)</Chakra.Radio>
-                <Chakra.Radio value="imperial">Imperial (ft, BTU/s)</Chakra.Radio>
-              </Chakra.HStack>
-            </Chakra.RadioGroup>
-            
-            <Chakra.Text fontSize="xs" color="fd.muted">
-              Switching units converts the values already entered.
-            </Chakra.Text>
-          </Chakra.VStack>
-        </Chakra.FormControl>
+        <UnitToggle value={units} onChange={handleUnitsChange} />
 
         {/* Add history toggle button */}
         {calculationHistory.length > 0 && (
@@ -486,7 +470,7 @@ const FlameHeightCalculator = () => {
                           {entry.result.value.toFixed(2)} {entry.result.unit}
                         </Chakra.Text>
                         <Chakra.Text fontSize="xs" color="fd.muted">
-                          {entry.units === 'SI' ? 'SI Units' : 'Imperial'}
+                          {entry.units === FEET ? 'Feet' : 'Meters'}
                         </Chakra.Text>
                       </Chakra.VStack>
                     </Chakra.HStack>
@@ -510,20 +494,20 @@ const FlameHeightCalculator = () => {
         label: result.type,
         value: result.value > 0 ? result.value.toFixed(2) : 'N/A',
         unit: result.unit,
-        note: units === 'imperial' && result.kW > 0 ? `(${result.kW.toFixed(0)} kW)` : null,
+        note: otherLength ? `(${otherLength})` : null,
       }]}
       details={(
         <Chakra.Text>
           Based on:
           <br />Fire Location: {location.label}
           {calculateMode !== 'heatRelease' && (
-            <><br />Heat Release Rate: {heatRelease} {units === 'SI' ? 'kW' : 'BTU/s'}</>
+            <><br />Heat Release Rate: {heatRelease} kW</>
           )}
           {location.usesSize && calculateMode !== 'diameter' && (
-            <><br />{location.sizeName}: {diameter} {units === 'SI' ? 'm' : 'ft'}</>
+            <><br />{location.sizeName}: {diameter} {unitLabel('length', units)}</>
           )}
           {calculateMode !== 'flameHeight' && (
-            <><br />Flame Height: {flameHeight} {units === 'SI' ? 'm' : 'ft'}</>
+            <><br />Flame Height: {flameHeight} {unitLabel('length', units)}</>
           )}
         </Chakra.Text>
       )}
@@ -538,7 +522,7 @@ const FlameHeightCalculator = () => {
         {(() => {
           const ceilingM = toSI(parseFloat(ceilingHeight), 'length', units);
           if (calculateMode !== 'flameHeight' || !result || result.error || !(result.flameHeightM > 0) || !(ceilingM > 0)) return null;
-          const unit = units === 'SI' ? 'm' : 'ft';
+          const unit = unitLabel('length', units);
           const gap = fromSI(Math.abs(ceilingM - result.flameHeightM), 'length', units);
           return result.flameHeightM >= ceilingM ? (
             <Chakra.Alert status="warning" alignItems="flex-start">

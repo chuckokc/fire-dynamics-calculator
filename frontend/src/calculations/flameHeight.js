@@ -3,8 +3,8 @@
 // Wall and corner: NUREG-1805 Chapter 4 (spreadsheet 04_Flame_Height_Calculations,
 // Wall_Flame_Height and Corner_Flame_Height sheets).
 // Equations are in SI: Q in kW, lengths in m.
-import { toSI, fromSI, unitLabel, FT_TO_M, BTU_PER_S_TO_KW, KW_TO_BTU_PER_S } from './units.js';
-import { fmt, step, conversionStep } from './work.js';
+import { toSI, fromSI, unitLabel, METRIC, FEET } from './units.js';
+import { fmt, step, feetToMetersStep, metersToFeetStep } from './work.js';
 
 export const FIRE_LOCATIONS = {
   center: {
@@ -46,37 +46,39 @@ const has = (v) => Number.isFinite(v);
  * Solve for flame height, HRR or fire size.
  * @param {'flameHeight'|'heatRelease'|'diameter'} mode  what to solve for
  * @param {'center'|'wall'|'corner'} location
- * @param {number} Q  HRR (kW or BTU/s)
+ * @param {number} Q  HRR (kW)
  * @param {number} D  fire diameter (center) or length along wall (wall), m or ft
  * @param {number} L  flame height, m or ft
- * @param {'SI'|'imperial'} units
- * @returns {null | {error: string} | {value, type, unit, kW?, flameHeightM?, steps}}
- *   null = not enough input yet; value is in display units
+ * @param {'metric'|'feet'} units  how lengths are entered and shown (HRR is always kW)
+ * @returns {null | {error: string} | {value, type, unit, valueM?, kW?, flameHeightM?, steps}}
+ *   null = not enough input yet. A length answer is `value` in the display
+ *   units and `valueM` in meters; an HRR answer is `value` = `kW`.
  */
-export function solveFlameHeight({ mode, location = 'center', Q, D, L, units = 'SI' }) {
+export function solveFlameHeight({ mode, location = 'center', Q, D, L, units = METRIC }) {
   const loc = FIRE_LOCATIONS[location];
   if (!loc) return null;
-  const imperial = units === 'imperial';
-  const q = toSI(Q, 'hrr', units);
+  const feet = units === FEET;
+  const q = Q;
   const d = toSI(D, 'length', units);
   const l = toSI(L, 'length', units);
   const sym = loc.sizeSymbol;
 
-  // Conversion steps for the inputs this mode uses
-  const inputSteps = (useQ, useD, useL) => {
-    if (!imperial) return [];
+  // Conversion steps for the lengths this mode uses (the HRR is already kW)
+  const inputSteps = (useD, useL) => {
+    if (!feet) return [];
     const out = [];
-    if (useQ) out.push(conversionStep('Convert heat release rate to kW', Q, 'BTU/s', BTU_PER_S_TO_KW, '1.055', 'kW'));
-    if (useD && loc.usesSize) out.push(conversionStep(`Convert ${loc.sizeName.toLowerCase()} to m`, D, 'ft', FT_TO_M, '0.3048', 'm'));
-    if (useL) out.push(conversionStep('Convert flame height to m', L, 'ft', FT_TO_M, '0.3048', 'm'));
+    if (useD && loc.usesSize) out.push(feetToMetersStep(`Convert ${loc.sizeName.toLowerCase()} to m`, D));
+    if (useL) out.push(feetToMetersStep('Convert flame height to m', L));
     return out;
   };
-  const lengthOut = (m, label) => (imperial
-    ? [conversionStep(`Convert ${label} to ft`, m, 'm', 1 / FT_TO_M, '3.281', 'ft')] : []);
+  // A length answer is worked in meters, then shown in feet as well: converted
+  // for the answer in feet mode, given for reference in metric mode.
+  const lengthOut = (m, label) => [metersToFeetStep(
+    feet ? `Convert ${label} to ft` : `${label[0].toUpperCase()}${label.slice(1)} in feet, for reference`, m)];
 
   if (mode === 'flameHeight') {
     if (!has(Q) || (loc.usesSize && !has(D))) return null;
-    const steps = inputSteps(true, true, false);
+    const steps = inputSteps(true, false);
     let h;
     if (location === 'wall') {
       if (!(d > 0)) return { error: 'Fire length along the wall must be greater than zero.' };
@@ -92,12 +94,12 @@ export function solveFlameHeight({ mode, location = 'center', Q, D, L, units = '
         `0.235 × (${fmt(q)})^(2/5) − 1.02 × ${fmt(d)} = ${fmt(0.235 * Math.pow(q, 0.4))} − ${fmt(1.02 * d)}`, `${fmt(h)} m`));
     }
     steps.push(...lengthOut(h, 'flame height'));
-    return { value: fromSI(h, 'length', units), flameHeightM: h, type: 'Flame Height', unit: unitLabel('length', units), steps };
+    return { value: fromSI(h, 'length', units), valueM: h, flameHeightM: h, type: 'Flame Height', unit: unitLabel('length', units), steps };
   }
 
   if (mode === 'heatRelease') {
     if (!has(L) || (loc.usesSize && !has(D))) return null;
-    const steps = inputSteps(false, true, true);
+    const steps = inputSteps(true, true);
     let kW;
     if (location === 'wall') {
       kW = d * Math.pow(l / 0.034, 1.5);              // Q = W (L/0.034)^(3/2)
@@ -114,13 +116,12 @@ export function solveFlameHeight({ mode, location = 'center', Q, D, L, units = '
       steps.push(step('Solve Heskestad for Q̇', 'Q̇ = ((L + 1.02 D) / 0.235)^(5/2)',
         `((${fmt(l)} + 1.02 × ${fmt(d)}) / 0.235)^(5/2)`, `${fmt(kW)} kW`));
     }
-    if (imperial) steps.push(conversionStep('Convert to BTU/s', kW, 'kW', KW_TO_BTU_PER_S, '0.9478', 'BTU/s'));
-    return { value: fromSI(kW, 'hrr', units), kW, type: 'Heat Release Rate', unit: unitLabel('hrr', units), steps };
+    return { value: kW, kW, type: 'Heat Release Rate', unit: 'kW', steps };
   }
 
   if (mode === 'diameter') {
     if (!loc.usesSize || !has(Q) || !has(L)) return null;
-    const steps = inputSteps(true, false, true);
+    const steps = inputSteps(false, true);
     let size;
     if (location === 'wall') {
       if (!(l > 0)) return { error: 'Flame height must be greater than zero.' };
@@ -136,7 +137,7 @@ export function solveFlameHeight({ mode, location = 'center', Q, D, L, units = '
         `(0.235 × (${fmt(q)})^(2/5) − ${fmt(l)}) / 1.02`, `${fmt(size)} m`));
     }
     steps.push(...lengthOut(size, `${sym === 'W' ? 'fire length' : 'fire diameter'}`));
-    return { value: fromSI(size, 'length', units), type: loc.sizeName, unit: unitLabel('length', units), steps };
+    return { value: fromSI(size, 'length', units), valueM: size, type: loc.sizeName, unit: unitLabel('length', units), steps };
   }
 
   return null;

@@ -1,56 +1,73 @@
 // Unit conversions shared by all calculators.
-// Every calculation runs in SI (kW, m, m², kW/m², kW/s²); these helpers move
-// values between SI and the imperial units shown on screen.
+//
+// Every calculation runs in metric (kW, m, m², kW/m², kW/s²). The only choice
+// the user makes is how LENGTHS and AREAS are entered and shown: meters or
+// feet. Energy quantities (heat release rate, heat flux, growth coefficient)
+// are always kW-based, the way NFPA 921 and the fire dynamics literature
+// publish them, so there is no BTU conversion anywhere.
 
-export const FT_TO_M = 0.3048;                 // exact
-export const FT2_TO_M2 = 0.09290304;           // exact (0.3048²)
-export const BTU_PER_S_TO_KW = 1.055056;       // 1 BTU/s = 1.055056 kW
-export const KW_TO_BTU_PER_S = 1 / BTU_PER_S_TO_KW; // ≈ 0.947817
-export const KW_M2_TO_BTU_FT2_S = 0.088055;    // 1 kW/m² ≈ 0.088055 BTU/ft²·s
+export const FT_TO_M = 0.3048;            // exact
+export const M_TO_FT = 1 / FT_TO_M;       // ≈ 3.28084
+export const FT2_TO_M2 = 0.09290304;      // exact (0.3048²)
 
-const isImperial = (units) => units === 'imperial';
+export const METRIC = 'metric';
+export const FEET = 'feet';
 
-// Quantity-specific factors: SI value = imperial value × toSI
-const TO_SI = {
-  length: FT_TO_M,          // ft → m
-  area: FT2_TO_M2,          // ft² → m²
-  hrr: BTU_PER_S_TO_KW,     // BTU/s → kW
-  alpha: BTU_PER_S_TO_KW,   // BTU/s³ → kW/s² (same energy factor)
-  heatFlux: 1 / KW_M2_TO_BTU_FT2_S // BTU/ft²·s → kW/m²
+/** Default unit system for every calculator. */
+export const DEFAULT_UNITS = FEET;
+
+// A mistyped or leftover unit name (for example the old 'SI' / 'imperial')
+// must fail loudly. Treating it as metric would quietly give wrong numbers.
+const checkUnits = (units) => {
+  if (units !== METRIC && units !== FEET) throw new Error(`Unknown unit system: ${units}`);
 };
 
-/** Convert a number entered in `units` to SI. */
-export const toSI = (value, quantity, units) =>
-  isImperial(units) ? value * TO_SI[quantity] : value;
+// Metric value = value as entered (ft or ft²) × factor
+const TO_METRIC = { length: FT_TO_M, area: FT2_TO_M2 };
 
-/** Convert an SI number to the display `units`. */
-export const fromSI = (value, quantity, units) =>
-  isImperial(units) ? value / TO_SI[quantity] : value;
+const factorFor = (quantity) => {
+  const factor = TO_METRIC[quantity];
+  if (factor === undefined) throw new Error(`No unit conversion for "${quantity}"; only length and area change with the unit system`);
+  return factor;
+};
+
+/** Convert a length or area entered in `units` to metric (m or m²). */
+export const toSI = (value, quantity, units) => {
+  checkUnits(units);
+  const factor = factorFor(quantity);
+  return units === FEET ? value * factor : value;
+};
+
+/** Convert a metric length or area to the display `units`. */
+export const fromSI = (value, quantity, units) => {
+  checkUnits(units);
+  const factor = factorFor(quantity);
+  return units === FEET ? value / factor : value;
+};
 
 /**
  * Convert an input-box string when the user switches unit systems.
- * Returns '' for empty input so the box stays empty.
+ * Returns '' for empty input so the box stays empty. Five significant digits
+ * keep a round trip clean at any size (10 ft becomes 3.048 m and back to 10 ft),
+ * so switching units never visibly nudges the answer. Trailing zeros are dropped.
  */
-export const convertInput = (value, quantity, toImperial, digits = 2) => {
+export const convertInput = (value, quantity, toFeet, sig = 5) => {
   if (value === '' || value === null || value === undefined) return '';
   const num = parseFloat(value);
   if (!Number.isFinite(num)) return '';
-  const converted = toImperial ? num / TO_SI[quantity] : num * TO_SI[quantity];
-  return converted.toFixed(digits);
+  const factor = factorFor(quantity);
+  return String(Number((toFeet ? num / factor : num * factor).toPrecision(sig)));
 };
 
-/** Display labels for each quantity. */
+/** Display labels for each quantity. Only length and area follow the unit system. */
 export const unitLabel = (quantity, units) => {
-  const imperial = isImperial(units);
+  checkUnits(units);
   switch (quantity) {
-    case 'length': return imperial ? 'ft' : 'm';
-    case 'area': return imperial ? 'ft²' : 'm²';
-    case 'hrr': return imperial ? 'BTU/s' : 'kW';
-    case 'alpha': return imperial ? 'BTU/s³' : 'kW/s²';
-    case 'heatFlux': return imperial ? 'BTU/ft²·s' : 'kW/m²';
+    case 'length': return units === FEET ? 'ft' : 'm';
+    case 'area': return units === FEET ? 'ft²' : 'm²';
+    case 'hrr': return 'kW';
+    case 'alpha': return 'kW/s²';
+    case 'heatFlux': return 'kW/m²';
     default: return '';
   }
 };
-
-/** Default unit system for every calculator. */
-export const DEFAULT_UNITS = 'imperial';

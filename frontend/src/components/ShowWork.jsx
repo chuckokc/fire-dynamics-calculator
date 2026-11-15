@@ -38,8 +38,8 @@ const ShowWork = ({ steps, title = 'Show the work' }) => {
             ))}
           </Chakra.OrderedList>
           <Chakra.Text fontSize="xs" color="fd.muted" mt={3}>
-            The equations are worked in SI units (kW, m). Imperial inputs are converted first and the answer converted back.
-            Numbers are rounded for display; the calculator uses full precision.
+            The equations are worked in metric units (kW, m). Lengths entered in feet are converted to meters first, and a
+            length answer is converted back to feet. Numbers are rounded for display; the calculator uses full precision.
           </Chakra.Text>
         </Chakra.AccordionPanel>
       </Chakra.AccordionItem>

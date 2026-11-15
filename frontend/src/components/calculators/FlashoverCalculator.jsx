@@ -3,9 +3,10 @@ import * as Chakra from '@chakra-ui/react';
 import EquationCard from '../EquationCard';
 import ResultCard from '../ResultCard';
 import { MATERIALS, flashoverHRR, compareFire } from '../../calculations/flashover.js';
-import { DEFAULT_UNITS, convertInput, toSI, fromSI } from '../../calculations/units.js';
+import { DEFAULT_UNITS, FEET, convertInput, unitLabel } from '../../calculations/units.js';
 import { fmt } from '../../calculations/work.js';
 import ShowWork from '../ShowWork';
+import UnitToggle from '../UnitToggle';
 import { useIncomingHRR } from '../HrrTransfer';
 
 const FlashoverCalculator = () => {
@@ -74,24 +75,24 @@ const FlashoverCalculator = () => {
       material: surfaceMaterial,
       units
     });
-    setResults(r ? { mqh: r.mqh, thomas: r.thomas, babrauskas: r.babrauskas, kW: r.kW, steps: r.steps } : null);
+    // The three estimates are always kW, whatever the length unit
+    setResults(r ? { mqh: r.kW.mqh, thomas: r.kW.thomas, babrauskas: r.kW.babrauskas, kW: r.kW, steps: r.steps } : null);
   };
 
   // HRR sent from another calculator: compare that fire with this room
   useIncomingHRR('flashover', (kW) => {
-    setCompareHRR(fromSI(kW, 'hrr', units).toFixed(2));
+    setCompareHRR(kW.toFixed(2));
   });
 
   // Switching units converts what's already entered
   const handleUnitsChange = (newUnits) => {
     if (newUnits === units) return;
-    const toImperial = newUnits === 'imperial';
-    setRoomHeight(prev => convertInput(prev, 'length', toImperial));
-    setRoomWidth(prev => convertInput(prev, 'length', toImperial));
-    setRoomLength(prev => convertInput(prev, 'length', toImperial));
-    setOpeningHeight(prev => convertInput(prev, 'length', toImperial));
-    setOpeningWidth(prev => convertInput(prev, 'length', toImperial));
-    setCompareHRR(prev => convertInput(prev, 'hrr', toImperial));
+    const toFeet = newUnits === FEET;
+    setRoomHeight(prev => convertInput(prev, 'length', toFeet));
+    setRoomWidth(prev => convertInput(prev, 'length', toFeet));
+    setRoomLength(prev => convertInput(prev, 'length', toFeet));
+    setOpeningHeight(prev => convertInput(prev, 'length', toFeet));
+    setOpeningWidth(prev => convertInput(prev, 'length', toFeet));
     setUnits(newUnits);
   };
 
@@ -101,13 +102,13 @@ const FlashoverCalculator = () => {
   let copyText = `Fire Dynamics Calculator - Flashover Analysis\n`;
   copyText += `Date: ${new Date().toLocaleString()}\n\n`;
   copyText += `Room Parameters:\n`;
-  copyText += `- Dimensions: ${roomLength} × ${roomWidth} × ${roomHeight} ${units === 'SI' ? 'm' : 'ft'}\n`;
-  copyText += `- Opening: ${openingWidth} × ${openingHeight} ${units === 'SI' ? 'm' : 'ft'}\n`;
+  copyText += `- Dimensions: ${roomLength} × ${roomWidth} × ${roomHeight} ${unitLabel('length', units)}\n`;
+  copyText += `- Opening: ${openingWidth} × ${openingHeight} ${unitLabel('length', units)}\n`;
   copyText += `- Surface Material: ${MATERIALS[surfaceMaterial].name}\n\n`;
   copyText += `Results:\n`;
-  copyText += `- MQH Method: ${results.mqh.toFixed(0)} ${units === 'SI' ? 'kW' : `BTU/s (${results.kW.mqh.toFixed(0)} kW)`}\n`;
-  copyText += `- Thomas Method: ${results.thomas.toFixed(0)} ${units === 'SI' ? 'kW' : `BTU/s (${results.kW.thomas.toFixed(0)} kW)`}\n`;
-  copyText += `- Babrauskas Method: ${results.babrauskas.toFixed(0)} ${units === 'SI' ? 'kW' : `BTU/s (${results.kW.babrauskas.toFixed(0)} kW)`}\n`;
+  copyText += `- MQH Method: ${results.mqh.toFixed(0)} kW\n`;
+  copyText += `- Thomas Method: ${results.thomas.toFixed(0)} kW\n`;
+  copyText += `- Babrauskas Method: ${results.babrauskas.toFixed(0)} kW\n`;
   
   navigator.clipboard.writeText(copyText).then(() => {
     setCopySuccess(true);
@@ -132,7 +133,7 @@ const FlashoverCalculator = () => {
         <Chakra.NumberInputField inputMode="decimal" />
       </Chakra.NumberInput>
       <Chakra.Text fontSize="sm" color="fd.muted">
-        {units === 'SI' ? 'm' : 'ft'}
+        {unitLabel('length', units)}
       </Chakra.Text>
     </Chakra.FormControl>
   );
@@ -205,24 +206,7 @@ const FlashoverCalculator = () => {
           </Chakra.Select>
         </Chakra.FormControl>
 
-        <Chakra.FormControl>
-          <Chakra.FormLabel>Units</Chakra.FormLabel>
-          <Chakra.VStack align="start" spacing={2}>
-            <Chakra.RadioGroup 
-              value={units} 
-              onChange={handleUnitsChange}
-            >
-              <Chakra.HStack spacing={4}>
-                <Chakra.Radio value="SI">SI (m, kW)</Chakra.Radio>
-                <Chakra.Radio value="imperial">Imperial (ft, BTU/s)</Chakra.Radio>
-              </Chakra.HStack>
-            </Chakra.RadioGroup>
-            
-            <Chakra.Text fontSize="xs" color="fd.muted">
-              Switching units converts the values already entered.
-            </Chakra.Text>
-          </Chakra.VStack>
-        </Chakra.FormControl>
+        <UnitToggle value={units} onChange={handleUnitsChange} />
 
         <Chakra.FormControl>
           <Chakra.FormLabel>Compare a Fire (optional)</Chakra.FormLabel>
@@ -230,7 +214,7 @@ const FlashoverCalculator = () => {
             <Chakra.NumberInputField inputMode="decimal" />
           </Chakra.NumberInput>
           <Chakra.Text fontSize="sm" color="fd.muted">
-            {units === 'SI' ? 'kW' : 'BTU/s'}, the heat release rate of a fire in this room. Shows whether it reaches each flashover estimate.
+            kW, the heat release rate of a fire in this room. Shows whether it reaches each flashover estimate.
           </Chakra.Text>
         </Chakra.FormControl>
 
@@ -265,9 +249,7 @@ const FlashoverCalculator = () => {
               <Chakra.VStack align="stretch" spacing={2}>
                 {calculationHistory.map((entry) => {
                   // Get the average of the three methods for coloring
-                  const avgHRR = entry.units === 'SI' 
-                    ? (entry.results.mqh + entry.results.thomas + entry.results.babrauskas) / 3
-                    : ((entry.results.mqh + entry.results.thomas + entry.results.babrauskas) / 3) * 1.055056;
+                  const avgHRR = (entry.results.mqh + entry.results.thomas + entry.results.babrauskas) / 3;
                   
                   const hrrColor = avgHRR > 5000 ? 'red' : 
                                   avgHRR > 2000 ? 'orange' :
@@ -288,13 +270,13 @@ const FlashoverCalculator = () => {
                       <Chakra.HStack justify="space-between">
                         <Chakra.VStack align="start" spacing={0}>
                           <Chakra.Text fontSize="sm" fontWeight="medium">
-                            Room: {entry.roomLength}×{entry.roomWidth}×{entry.roomHeight} {entry.units === 'SI' ? 'm' : 'ft'}
+                            Room: {entry.roomLength}×{entry.roomWidth}×{entry.roomHeight} {unitLabel('length', entry.units)}
                           </Chakra.Text>
                           <Chakra.Text fontSize="xs" color="fd.muted">
                             {entry.timestamp}
                           </Chakra.Text>
                           <Chakra.Text fontSize="xs" color="fd.muted">
-                            Opening: {entry.openingWidth}×{entry.openingHeight} {entry.units === 'SI' ? 'm' : 'ft'}
+                            Opening: {entry.openingWidth}×{entry.openingHeight} {unitLabel('length', entry.units)}
                           </Chakra.Text>
                           <Chakra.Text fontSize="xs" color="fd.muted">
                             {MATERIALS[entry.surfaceMaterial].name}
@@ -311,7 +293,7 @@ const FlashoverCalculator = () => {
                             Babrauskas: {entry.results.babrauskas.toFixed(0)}
                           </Chakra.Text>
                           <Chakra.Text fontSize="xs" color="fd.muted">
-                            {entry.units === 'SI' ? 'kW' : 'BTU/s'}
+                            kW
                           </Chakra.Text>
                         </Chakra.VStack>
                       </Chakra.HStack>
@@ -328,9 +310,9 @@ const FlashoverCalculator = () => {
             accent="blue.400"
             title="Required Heat Release Rate for Flashover"
             stats={[
-              { label: 'MQH', value: results.mqh.toFixed(0), unit: units === 'SI' ? 'kW' : 'BTU/s', note: units === 'SI' ? null : `(${results.kW.mqh.toFixed(0)} kW)` },
-              { label: 'Thomas', value: results.thomas.toFixed(0), unit: units === 'SI' ? 'kW' : 'BTU/s', note: units === 'SI' ? null : `(${results.kW.thomas.toFixed(0)} kW)` },
-              { label: 'Babrauskas', value: results.babrauskas.toFixed(0), unit: units === 'SI' ? 'kW' : 'BTU/s', note: units === 'SI' ? null : `(${results.kW.babrauskas.toFixed(0)} kW)` },
+              { label: 'MQH', value: results.mqh.toFixed(0), unit: 'kW' },
+              { label: 'Thomas', value: results.thomas.toFixed(0), unit: 'kW' },
+              { label: 'Babrauskas', value: results.babrauskas.toFixed(0), unit: 'kW' },
             ]}
             onCopy={copyResults}
             copySuccess={copySuccess}
@@ -338,11 +320,11 @@ const FlashoverCalculator = () => {
           />
         )}
         {results && parseFloat(compareHRR) > 0 && (() => {
-          const fireKW = toSI(parseFloat(compareHRR), 'hrr', units);
+          const fireKW = parseFloat(compareHRR);
           const cmp = compareFire(fireKW, results.kW);
           const names = { mqh: 'MQH', babrauskas: 'Babrauskas', thomas: 'Thomas' };
           const reached = Object.keys(names).filter((k) => cmp[k]).map((k) => names[k]);
-          const fire = units === 'SI' ? `${fmt(fireKW)} kW` : `${fmt(parseFloat(compareHRR))} BTU/s (${fmt(fireKW)} kW)`;
+          const fire = `${fmt(fireKW)} kW`;
           const status = cmp.count === 3 ? 'error' : cmp.count > 0 ? 'warning' : 'success';
           const message = cmp.count === 3
             ? 'It reaches all three flashover estimates, so flashover of this room is likely.'

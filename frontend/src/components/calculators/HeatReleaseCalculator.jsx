@@ -5,7 +5,8 @@ import ResultCard from '../ResultCard';
 import { MATERIAL_PROPERTIES, heatReleaseRate, labMassFlux } from '../../calculations/hrr.js';
 import ShowWork from '../ShowWork';
 import { SendHRRMenu } from '../HrrTransfer';
-import { DEFAULT_UNITS, convertInput } from '../../calculations/units.js';
+import { DEFAULT_UNITS, FEET, convertInput, unitLabel } from '../../calculations/units.js';
+import UnitToggle from '../UnitToggle';
 
 const HeatReleaseCalculator = () => {
   // State declarations
@@ -14,7 +15,6 @@ const HeatReleaseCalculator = () => {
   const [units, setUnits] = useState(DEFAULT_UNITS);
   const [manualMassFlux, setManualMassFlux] = useState('');
   const [result, setResult] = useState(null);
-  const [resultKW, setResultKW] = useState(null);
   const [resultSteps, setResultSteps] = useState(null);
   // Lab helper: work out mass flux from a burn
   const [showLab, setShowLab] = useState(false);
@@ -78,7 +78,6 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
   // incomplete or give no answer, and never left showing numbers for a different form.
   const clearResult = () => {
     setResult(null);
-    setResultKW(null);
     setResultSteps(null);
   };
 
@@ -93,8 +92,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
       units
     });
     if (!r) return clearResult();
-    setResult(r.value);
-    setResultKW(r.kW);
+    setResult(r.kW);
     setResultSteps(r.steps);
   };
 
@@ -119,8 +117,8 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
   // Switching units converts what's already entered (mass flux is always g/m²-s)
   const handleUnitsChange = (newUnits) => {
     if (newUnits === units) return;
-    setBurningArea(prev => convertInput(prev, 'area', newUnits === 'imperial'));
-    setLabArea(prev => convertInput(prev, 'area', newUnits === 'imperial', 4));
+    setBurningArea(prev => convertInput(prev, 'area', newUnits === FEET));
+    setLabArea(prev => convertInput(prev, 'area', newUnits === FEET));
     setUnits(newUnits);
   };
 
@@ -132,10 +130,10 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
   let copyText = `Fire Dynamics Calculator - Heat Release Rate\n`;
   copyText += `Date: ${new Date().toLocaleString()}\n`;
   copyText += `Method: Q̇ = ṁ" × A × ΔHc\n\n`;
-  copyText += `Result: ${result.toFixed(2)} ${units === 'SI' ? 'kW' : `BTU/s (${resultKW.toFixed(2)} kW)`}\n\n`;
+  copyText += `Result: ${result.toFixed(2)} kW\n\n`;
   copyText += `Input Parameters:\n`;
   copyText += `- Material: ${materialName}\n`;
-  copyText += `- Burning Area: ${burningArea} ${units === 'SI' ? 'm²' : 'ft²'}\n`;
+  copyText += `- Burning Area: ${burningArea} ${unitLabel('area', units)}\n`;
   
   if (needsMassFluxInput && manualMassFlux) {
     copyText += `- Mass Flux: ${manualMassFlux} g/m²-s\n`;
@@ -168,7 +166,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
           <Chakra.Text fontSize="sm" color="fd.muted" mt={2}>
             Where:
             <br />
-            Q̇ = Heat release rate (kW or BTU/s)
+            Q̇ = Heat release rate (kW)
             <br />
             ṁ" = Mass loss rate per unit area (g/m²-s)
             <br />
@@ -233,7 +231,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
                   {labField('Starting mass', labStart, setLabStart, 'g')}
                   {labField('Ending mass', labEnd, setLabEnd, 'g')}
                   {labField('Burn time', labTime, setLabTime, 'seconds')}
-                  {labField('Sample burning area', labArea, setLabArea, units === 'SI' ? 'm²' : 'ft²')}
+                  {labField('Sample burning area', labArea, setLabArea, unitLabel('area', units))}
                 </Chakra.SimpleGrid>
                 {lab?.error && (
                   <Chakra.Alert status="warning" size="sm"><Chakra.AlertIcon />{lab.error}</Chakra.Alert>
@@ -264,28 +262,11 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
             <Chakra.NumberInputField inputMode="decimal" />
           </Chakra.NumberInput>
           <Chakra.Text fontSize="sm" color="fd.muted">
-            {units === 'SI' ? 'm²' : 'ft²'}
+            {unitLabel('area', units)}
           </Chakra.Text>
         </Chakra.FormControl>
 
-        <Chakra.FormControl>
-          <Chakra.FormLabel>Units</Chakra.FormLabel>
-          <Chakra.VStack align="start" spacing={2}>
-            <Chakra.RadioGroup 
-              value={units} 
-              onChange={handleUnitsChange}
-            >
-              <Chakra.HStack spacing={4}>
-                <Chakra.Radio value="SI">SI (m², kW)</Chakra.Radio>
-                <Chakra.Radio value="imperial">Imperial (ft², BTU/s)</Chakra.Radio>
-              </Chakra.HStack>
-            </Chakra.RadioGroup>
-            
-            <Chakra.Text fontSize="xs" color="fd.muted">
-              Switching units converts the values already entered.
-            </Chakra.Text>
-          </Chakra.VStack>
-        </Chakra.FormControl>
+        <UnitToggle value={units} onChange={handleUnitsChange} quantity="area" />
 
         {/* Add history toggle button */}
         {calculationHistory.length > 0 && (
@@ -337,10 +318,10 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
                       </Chakra.VStack>
                       <Chakra.VStack align="end" spacing={0}>
                         <Chakra.Text fontSize="sm" fontWeight="bold">
-                          {entry.result.toFixed(0)} {entry.units === 'SI' ? 'kW' : 'BTU/s'}
+                          {entry.result.toFixed(0)} kW
                         </Chakra.Text>
                         <Chakra.Text fontSize="xs" color="fd.muted">
-                          {entry.burningArea} {entry.units === 'SI' ? 'm²' : 'ft²'}
+                          {entry.burningArea} {unitLabel('area', entry.units)}
                         </Chakra.Text>
                       </Chakra.VStack>
                     </Chakra.HStack>
@@ -358,8 +339,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
             stats={[{
               label: 'Heat Release Rate',
               value: result.toFixed(0),
-              unit: units === 'SI' ? 'kW' : 'BTU/s',
-              note: units === 'SI' ? null : `(${resultKW.toFixed(0)} kW)`,
+              unit: 'kW',
             }]}
             details={(
               <>
@@ -372,15 +352,12 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
                     Heat of Combustion: {MATERIAL_PROPERTIES[material].heatOfCombustion} kJ/g
                   </Chakra.Text>
                 )}
-                <Chakra.Text color="fd.muted" mt={2}>
-                  Conversion: 1 kW = 0.947817 BTU/s
-                </Chakra.Text>
               </>
             )}
             onCopy={copyResults}
             copySuccess={copySuccess}
             onSave={saveToHistory}
-            actions={<SendHRRMenu kW={resultKW} from="Heat Release Rate" />}
+            actions={<SendHRRMenu kW={result} from="Heat Release Rate" />}
           />
         )}
         {result && <ShowWork steps={resultSteps} />}
