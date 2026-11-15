@@ -23,22 +23,30 @@ const NO_STORE = { 'cache-control': 'no-store' };
 const encoder = new TextEncoder();
 
 // People who do not have a code can email the creator from the login page.
+// A plain mailto: link only works when the visitor has a mail app registered on
+// their device (many do not), so the page also offers Gmail and Outlook on the
+// web and a copy-the-address button.
 const CREATOR_EMAIL = 'chuckokc@gmail.com';
-export const REQUEST_ACCESS_MAILTO =
-  `mailto:${CREATOR_EMAIL}?subject=${encodeURIComponent('Fire Dynamics Calculator Access Request')}` +
-  `&body=${encodeURIComponent(
-    [
-      'Hello Chuck,',
-      '',
-      'I would like the access code for the Fire Dynamics Calculator.',
-      '',
-      'Name:',
-      'Agency / school / class:',
-      'How I heard about the calculator:',
-      '',
-      'Thank you.',
-    ].join('\r\n')
-  )}`;
+const REQUEST_SUBJECT = 'Fire Dynamics Calculator Access Request';
+const REQUEST_BODY_LINES = [
+  'Hello Chuck,',
+  '',
+  'I would like the access code for the Fire Dynamics Calculator.',
+  '',
+  'Name:',
+  'Agency / school / class:',
+  'How I heard about the calculator:',
+  '',
+  'Thank you.',
+];
+const requestQuery = (subjectKey, lineBreak) =>
+  `${subjectKey}=${encodeURIComponent(REQUEST_SUBJECT)}&body=${encodeURIComponent(REQUEST_BODY_LINES.join(lineBreak))}`;
+export const REQUEST_ACCESS_MAILTO = `mailto:${CREATOR_EMAIL}?${requestQuery('subject', '\r\n')}`;
+export const REQUEST_ACCESS_GMAIL =
+  `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(CREATOR_EMAIL)}&${requestQuery('su', '\n')}`;
+export const REQUEST_ACCESS_OUTLOOK =
+  `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(CREATOR_EMAIL)}&${requestQuery('subject', '\n')}`;
+const escapeAttr = (value) => value.replace(/&/g, '&amp;');
 const FEEDBACK_MAILTO = `mailto:${CREATOR_EMAIL}?subject=${encodeURIComponent('Fire Dynamics Calculator Feedback')}`;
 
 // Codes are not case-sensitive and ignore stray or repeated spaces.
@@ -268,7 +276,13 @@ export function loginPage({ error = false, expired = false } = {}) {
   .error { margin:0 0 1rem; padding:.6rem .8rem; border:1px solid var(--err); border-radius:.4rem; color:var(--err); text-align:left; }
   .notice { margin:0 0 1rem; padding:.6rem .8rem; border:1px solid var(--line); border-radius:.4rem; color:var(--muted); text-align:left; }
   hr { border:0; border-top:1px solid var(--line); margin:1.5rem 0 1rem; }
-  .request { margin:1rem 0 0; font-size:.95rem; }
+  .request { margin:1.25rem 0 0; font-size:.95rem; }
+  .request p { margin:.35rem 0; }
+  .options { display:flex; flex-wrap:wrap; gap:.5rem; justify-content:center; margin:.6rem 0; }
+  .options a, .options button { padding:.45rem .8rem; border:1px solid var(--line); border-radius:.4rem; background:transparent; color:var(--blue); font-size:.95rem; text-decoration:none; }
+  .options a:hover, .options button:hover { border-color:var(--blue); }
+  #addr { font-weight:600; user-select:all; word-break:break-all; }
+  #copied { color:var(--muted); }
   .small { margin:.25rem 0; font-size:.9rem; color:var(--muted); }
   a { color:var(--blue); }
 </style>
@@ -287,7 +301,16 @@ export function loginPage({ error = false, expired = false } = {}) {
     </div>
     <button type="submit" class="primary">Access Calculator</button>
   </form>
-  <p class="request">Don't have a code? <a href="${REQUEST_ACCESS_MAILTO.replace(/&/g, '&amp;')}">Email Chuck to request one</a>, or write to ${CREATOR_EMAIL}</p>
+  <div class="request">
+    <p>Don't have a code? Email Chuck to request one:</p>
+    <div class="options">
+      <a href="${escapeAttr(REQUEST_ACCESS_GMAIL)}" target="_blank" rel="noopener noreferrer">Gmail</a>
+      <a href="${escapeAttr(REQUEST_ACCESS_OUTLOOK)}" target="_blank" rel="noopener noreferrer">Outlook</a>
+      <a href="${escapeAttr(REQUEST_ACCESS_MAILTO)}">Mail app</a>
+      <button type="button" id="copy">Copy address</button>
+    </div>
+    <p class="small">Or write to <span id="addr">${CREATOR_EMAIL}</span> <span id="copied" role="status"></span></p>
+  </div>
   <hr>
   <p class="small">With dedication from Chuck ❤️ Christine Carpenter</p>
   <p class="small"><a href="${FEEDBACK_MAILTO}">Provide Feedback</a></p>
@@ -300,6 +323,31 @@ export function loginPage({ error = false, expired = false } = {}) {
     code.type = show ? 'text' : 'password';
     toggle.textContent = show ? 'Hide' : 'Show';
     toggle.setAttribute('aria-pressed', String(show));
+  });
+
+  var copyButton = document.getElementById('copy');
+  var addr = document.getElementById('addr');
+  var copied = document.getElementById('copied');
+  function selectAddress() {
+    var range = document.createRange();
+    range.selectNodeContents(addr);
+    var selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+  copyButton.addEventListener('click', function () {
+    var text = addr.textContent;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        copied.textContent = '\\u2013 copied';
+      }, function () {
+        selectAddress();
+        copied.textContent = '\\u2013 selected, press Ctrl+C';
+      });
+    } else {
+      selectAddress();
+      copied.textContent = '\\u2013 selected, press Ctrl+C';
+    }
   });
 </script>
 </body>

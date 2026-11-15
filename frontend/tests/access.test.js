@@ -6,7 +6,9 @@ import assert from 'node:assert/strict';
 
 import {
   COOKIE_NAME,
+  REQUEST_ACCESS_GMAIL,
   REQUEST_ACCESS_MAILTO,
+  REQUEST_ACCESS_OUTLOOK,
   SESSION_SECONDS,
   SIGN_OUT_SERVICE_WORKER,
   accessState,
@@ -313,10 +315,34 @@ test('login page: offers an email to the creator to request the code', async () 
   assert.ok(body.includes('\r\n'), 'body should have line breaks');
   assert.equal(body.toLowerCase().includes(ENV.ACCESS_CODE), false);
 
-  // On the page, as a clickable link (the & between subject and body is escaped for HTML).
+  // Gmail and Outlook on the web, for people with no mail app on their device.
+  const gmail = new URL(REQUEST_ACCESS_GMAIL);
+  assert.equal(gmail.origin, 'https://mail.google.com');
+  assert.equal(gmail.searchParams.get('view'), 'cm');
+  assert.equal(gmail.searchParams.get('to'), 'chuckokc@gmail.com');
+  assert.equal(gmail.searchParams.get('su'), 'Fire Dynamics Calculator Access Request');
+  assert.match(gmail.searchParams.get('body'), /Agency \/ school \/ class:/);
+  const outlook = new URL(REQUEST_ACCESS_OUTLOOK);
+  assert.equal(outlook.origin, 'https://outlook.office.com');
+  assert.equal(outlook.pathname, '/mail/deeplink/compose');
+  assert.equal(outlook.searchParams.get('to'), 'chuckokc@gmail.com');
+  assert.equal(outlook.searchParams.get('subject'), 'Fire Dynamics Calculator Access Request');
+  assert.match(outlook.searchParams.get('body'), /Name:/);
+  for (const link of [REQUEST_ACCESS_GMAIL, REQUEST_ACCESS_OUTLOOK, REQUEST_ACCESS_MAILTO]) {
+    assert.equal(link.toLowerCase().includes(ENV.ACCESS_CODE), false);
+  }
+
+  // On the page: all three links, the copy button and the plain-text address. The
+  // & between query parameters is escaped for HTML, and the web links open in a new tab.
+  const asAttribute = (link) => link.replace(/&/g, '&amp;');
   for (const html of [loginPage(), loginPage({ error: true }), loginPage({ expired: true })]) {
-    assert.match(html, /Don't have a code\? <a href="mailto:chuckokc@gmail\.com\?subject=Fire%20Dynamics%20Calculator%20Access%20Request&amp;body=/);
-    assert.match(html, />Email Chuck to request one<\/a>, or write to chuckokc@gmail\.com<\/p>/, 'address is also shown as plain text for people without an email app');
+    assert.match(html, /Don't have a code\? Email Chuck to request one:/);
+    assert.ok(html.includes(`<a href="${asAttribute(REQUEST_ACCESS_GMAIL)}" target="_blank" rel="noopener noreferrer">Gmail</a>`));
+    assert.ok(html.includes(`<a href="${asAttribute(REQUEST_ACCESS_OUTLOOK)}" target="_blank" rel="noopener noreferrer">Outlook</a>`));
+    assert.ok(html.includes(`<a href="${asAttribute(REQUEST_ACCESS_MAILTO)}">Mail app</a>`));
+    assert.match(html, /<button type="button" id="copy">Copy address<\/button>/);
+    assert.match(html, /<span id="addr">chuckokc@gmail\.com<\/span>/, 'address is also shown as plain text');
+    assert.match(html, /navigator\.clipboard\.writeText/);
     assert.match(html, /Provide Feedback/);
   }
 });

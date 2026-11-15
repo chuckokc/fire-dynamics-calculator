@@ -66,10 +66,12 @@ app's files are served, and the code is not in this repo or in the app.
   single common word.
 - `npm run dev` does not run the Edge Functions, so the local dev server is
   not gated.
-- The login page has an "Email Chuck to request one" link. It opens the
-  visitor's email app with a message to the creator, ready to fill in with their
-  name and agency or class. The address is also shown as plain text for people
-  without an email app set up.
+- The login page lets visitors request a code by email to the creator, with the
+  message ready to fill in (name, agency or class). A plain `mailto:` link does
+  nothing on a device with no mail app registered, so there are three ways in:
+  **Gmail** and **Outlook** (both open a new message in the browser) and
+  **Mail app** (the `mailto:` link). There is also a **Copy address** button, and
+  the address is shown as plain text.
 - Public on purpose: the login page, the install manifest and the icons.
 
 ## Checks
