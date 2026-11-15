@@ -1,15 +1,20 @@
 // Access gate logic, shared by the two Netlify Edge Functions (access.js, gate.js).
 //
 // Runs on Netlify Edge (Deno) and under `node --test`, so it only uses
-// web-standard APIs: Web Crypto, Request/Response, URL, TextEncoder.
+// web-standard APIs: Web Crypto, Intl, Request/Response, URL, TextEncoder.
 //
 // How it works
-//   * The access code lives in the ACCESS_CODE environment variable on Netlify.
-//     It is never in the repo or in the files the browser downloads.
-//   * Entering the right code at /access sets a signed cookie. Every other
+//   * The access codes live in the ACCESS_CODE environment variable on Netlify.
+//     They are never in the repo or in the files the browser downloads.
+//     ACCESS_CODE holds one or more codes separated by commas. A code can end
+//     with "until YYYY-MM-DD" and then stops working at the end of that day
+//     (U.S. Central time), for example:
+//         old phrase until 2027-05-14, new phrase
+//   * Entering a valid code at /access sets a signed cookie. Every other
 //     request must carry a valid cookie or it gets nothing but a redirect/401.
-//   * The cookie is signed with a key derived from the code, so changing
-//     ACCESS_CODE invalidates every existing session at once.
+//   * The cookie is signed with a key derived from the code that was entered,
+//     so a session ends when its code reaches its end date or is removed from
+//     ACCESS_CODE, while sessions from the other codes carry on.
 
 export const COOKIE_NAME = 'fc_access';
 export const SESSION_SECONDS = 60 * 60 * 24 * 180; // 180 days, renewed on each app load
@@ -17,7 +22,7 @@ const NO_STORE = { 'cache-control': 'no-store' };
 
 const encoder = new TextEncoder();
 
-// People who do not have the code can email the creator from the login page.
+// People who do not have a code can email the creator from the login page.
 const CREATOR_EMAIL = 'chuckokc@gmail.com';
 export const REQUEST_ACCESS_MAILTO =
   `mailto:${CREATOR_EMAIL}?subject=${encodeURIComponent('Fire Dynamics Calculator Access Request')}` +
@@ -36,10 +41,65 @@ export const REQUEST_ACCESS_MAILTO =
   )}`;
 const FEEDBACK_MAILTO = `mailto:${CREATOR_EMAIL}?subject=${encodeURIComponent('Fire Dynamics Calculator Feedback')}`;
 
-// Codes are not case-sensitive (same as the old in-app screen) and ignore stray spaces.
-export const normalizeCode = (value) => String(value ?? '').trim().toUpperCase();
+// Codes are not case-sensitive and ignore stray or repeated spaces.
+export const normalizeCode = (value) => String(value ?? '').trim().replace(/\s+/g, ' ').toUpperCase();
 
-export const isConfigured = (env) => normalizeCode(env?.ACCESS_CODE) !== '';
+// ---------- the configured codes ----------
+
+// The instant a code with an "until" date stops working: midnight at the end of
+// that day in U.S. Central time. Midnight Central is 05:00 or 06:00 UTC
+// depending on daylight saving time, so ask the time zone database which.
+// Returns null for dates that do not exist (such as 2027-02-31).
+export function endOfDayCentral(dateText) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateText);
+  if (!match) return null;
+  const [year, month, day] = match.slice(1).map(Number);
+  const check = new Date(Date.UTC(year, month - 1, day));
+  if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) {
+    return null;
+  }
+  const hourInChicago = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Chicago',
+    hour: 'numeric',
+    hourCycle: 'h23',
+  });
+  for (const utcHour of [5, 6]) {
+    const instant = Date.UTC(year, month - 1, day + 1, utcHour);
+    if (Number(hourInChicago.format(new Date(instant))) === 0) return instant;
+  }
+  return null;
+}
+
+const UNTIL = /^(.*\S)\s+until\s+(\d{4}-\d{2}-\d{2})$/i;
+
+// "old phrase until 2027-05-14, new phrase" -> [{ code, endsAt }, { code, endsAt: null }]
+// A code whose date does not exist is left out rather than made open-ended.
+export function parseCodes(raw) {
+  const entries = [];
+  for (const part of String(raw ?? '').split(',')) {
+    const text = part.trim();
+    if (!text) continue;
+    const match = UNTIL.exec(text);
+    if (!match) {
+      entries.push({ code: normalizeCode(text), endsAt: null });
+      continue;
+    }
+    const endsAt = endOfDayCentral(match[2]);
+    if (endsAt !== null) entries.push({ code: normalizeCode(match[1]), endsAt });
+  }
+  return entries;
+}
+
+// missing: nothing usable is configured. expired: every code has passed its end
+// date. ok: at least one code works right now (those are in `active`).
+export function accessState(env, nowMs = Date.now()) {
+  const entries = parseCodes(env?.ACCESS_CODE);
+  if (entries.length === 0) return { state: 'missing', active: [] };
+  const active = entries.filter((entry) => entry.endsAt === null || nowMs < entry.endsAt);
+  return { state: active.length > 0 ? 'ok' : 'expired', active };
+}
+
+// ---------- codes, sessions and cookies ----------
 
 async function hmacBytes(secret, message) {
   const key = await crypto.subtle.importKey(
@@ -66,32 +126,40 @@ function bytesEqual(a, b) {
   return diff === 0;
 }
 
-// Compare HMACs of both values so neither length nor content timing leaks.
-export async function codeMatches(input, env) {
-  if (!isConfigured(env)) return false;
-  const [a, b] = await Promise.all([
-    hmacBytes('fc-code-compare-v1', normalizeCode(input)),
-    hmacBytes('fc-code-compare-v1', normalizeCode(env.ACCESS_CODE)),
-  ]);
-  return bytesEqual(a, b);
+// Which working code (if any) did the visitor type? Compares HMACs of every
+// code so neither length nor content timing leaks.
+export async function matchCode(input, active) {
+  const probe = await hmacBytes('fc-code-compare-v1', normalizeCode(input));
+  let matched = null;
+  for (const entry of active) {
+    const candidate = await hmacBytes('fc-code-compare-v1', entry.code);
+    if (bytesEqual(probe, candidate) && matched === null) matched = entry;
+  }
+  return matched;
 }
 
-const signingSecret = (env) => `fc-session-v1|${normalizeCode(env.ACCESS_CODE)}`;
+const signingSecret = (entry) => `fc-session-v1|${entry.code}`;
 
-export async function createToken(env, nowMs = Date.now()) {
+export async function createToken(entry, nowMs = Date.now()) {
   const expires = Math.floor(nowMs / 1000) + SESSION_SECONDS;
-  const signature = toBase64Url(await hmacBytes(signingSecret(env), `v1.${expires}`));
+  const signature = toBase64Url(await hmacBytes(signingSecret(entry), `v1.${expires}`));
   return `${expires}.${signature}`;
 }
 
-export async function tokenIsValid(token, env, nowMs = Date.now()) {
-  if (!isConfigured(env) || typeof token !== 'string') return false;
+// Returns the code entry this session was created with, or null when the
+// cookie is missing, edited, out of date, or from a code that no longer works.
+export async function findSession(token, active, nowMs = Date.now()) {
+  if (typeof token !== 'string') return null;
   const match = /^(\d{1,12})\.([A-Za-z0-9_-]{20,64})$/.exec(token);
-  if (!match) return false;
+  if (!match) return null;
   const expires = Number(match[1]);
-  if (expires * 1000 <= nowMs) return false;
-  const expected = toBase64Url(await hmacBytes(signingSecret(env), `v1.${expires}`));
-  return bytesEqual(encoder.encode(match[2]), encoder.encode(expected));
+  if (expires * 1000 <= nowMs) return null;
+  let found = null;
+  for (const entry of active) {
+    const expected = toBase64Url(await hmacBytes(signingSecret(entry), `v1.${expires}`));
+    if (bytesEqual(encoder.encode(match[2]), encoder.encode(expected)) && found === null) found = entry;
+  }
+  return found;
 }
 
 export function readCookie(header, name) {
@@ -125,9 +193,9 @@ const wantsPage = (request) =>
     (request.headers.get('accept') || '').includes('text/html'));
 
 // What an installed copy of the app receives when it checks for an update
-// without a valid session (code changed, session expired, or the app was
-// installed before the gate existed). It wipes the cached app and sends the
-// person to the login page. Without it, a cached copy would keep working
+// without a valid session (code changed or ended, session expired, or the app
+// was installed before the gate existed). It wipes the cached app and sends
+// the person to the login page. Without it, a cached copy would keep working
 // forever and could never update.
 export const SIGN_OUT_SERVICE_WORKER = `// Access code required: remove the cached app and ask for the code.
 self.addEventListener('install', () => self.skipWaiting());
@@ -170,7 +238,7 @@ function notConfiguredResponse() {
   );
 }
 
-export function loginPage({ error = false } = {}) {
+export function loginPage({ error = false, expired = false } = {}) {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -198,6 +266,7 @@ export function loginPage({ error = false } = {}) {
   .primary { width:100%; padding:.8rem; border:0; background:#3182ce; color:#fff; font-size:1.05rem; font-weight:600; }
   .primary:hover { background:var(--blue-dark); }
   .error { margin:0 0 1rem; padding:.6rem .8rem; border:1px solid var(--err); border-radius:.4rem; color:var(--err); text-align:left; }
+  .notice { margin:0 0 1rem; padding:.6rem .8rem; border:1px solid var(--line); border-radius:.4rem; color:var(--muted); text-align:left; }
   hr { border:0; border-top:1px solid var(--line); margin:1.5rem 0 1rem; }
   .request { margin:1rem 0 0; font-size:.95rem; }
   .small { margin:.25rem 0; font-size:.9rem; color:var(--muted); }
@@ -209,6 +278,7 @@ export function loginPage({ error = false } = {}) {
   <h1>Fire Dynamics Calculator</h1>
   <p class="tagline">Professional fire investigation tools based on NUREG-1805 methodology</p>
   <form method="post" action="/access">
+    ${expired ? '<p class="notice" role="alert">The access codes for this site have expired. Please request a new one below.</p>' : ''}
     ${error ? '<p class="error" role="alert">That code did not work. Please check it and try again.</p>' : ''}
     <label for="code">Access code</label>
     <div class="field">
@@ -237,13 +307,14 @@ export function loginPage({ error = false } = {}) {
 }
 
 // Runs in front of the whole site (everything except the public paths).
-export async function handleGate(request, next, env) {
+export async function handleGate(request, next, env, nowMs = Date.now()) {
   const { pathname } = new URL(request.url);
   if (isPublicPath(pathname)) return next();
-  if (!isConfigured(env)) return notConfiguredResponse();
+  const { state, active } = accessState(env, nowMs);
+  if (state === 'missing') return notConfiguredResponse();
 
   const token = readCookie(request.headers.get('cookie'), COOKIE_NAME);
-  if (await tokenIsValid(token, env)) return next();
+  if (await findSession(token, active, nowMs)) return next();
 
   if (pathname === '/sw.js') {
     return new Response(SIGN_OUT_SERVICE_WORKER, {
@@ -258,27 +329,29 @@ export async function handleGate(request, next, env) {
   });
 }
 
-// Serves the login page, checks the code, and answers the app's "am I still signed in?" ping.
-export async function handleAccess(request, env, { failDelayMs = 400 } = {}) {
+// Serves the login page, checks the code, and answers the app's "still signed in?" ping.
+export async function handleAccess(request, env, { failDelayMs = 400, nowMs = Date.now() } = {}) {
   const path = new URL(request.url).pathname.replace(/\/+$/, '') || '/';
-  if (!isConfigured(env)) return notConfiguredResponse();
+  const { state, active } = accessState(env, nowMs);
+  if (state === 'missing') return notConfiguredResponse();
 
-  const signedIn = await tokenIsValid(readCookie(request.headers.get('cookie'), COOKIE_NAME), env);
+  const session = await findSession(readCookie(request.headers.get('cookie'), COOKIE_NAME), active, nowMs);
   const isRead = request.method === 'GET' || request.method === 'HEAD';
+  const expired = state === 'expired';
 
   if (path === '/access/status') {
     if (!isRead) return new Response('Method not allowed', { status: 405, headers: NO_STORE });
-    if (!signedIn) return new Response(null, { status: 401, headers: NO_STORE });
+    if (!session) return new Response(null, { status: 401, headers: NO_STORE });
     // Renew the session so people who use the app regularly stay signed in.
     return new Response(null, {
       status: 204,
-      headers: { ...NO_STORE, 'set-cookie': sessionCookie(await createToken(env)) },
+      headers: { ...NO_STORE, 'set-cookie': sessionCookie(await createToken(session, nowMs)) },
     });
   }
 
   if (path !== '/access') return new Response('Not found', { status: 404, headers: NO_STORE });
 
-  if (isRead) return signedIn ? redirect('/') : htmlResponse(loginPage());
+  if (isRead) return session ? redirect('/') : htmlResponse(loginPage({ expired }));
 
   if (request.method === 'POST') {
     let code = '';
@@ -287,12 +360,13 @@ export async function handleAccess(request, env, { failDelayMs = 400 } = {}) {
     } catch {
       code = '';
     }
-    if (code.length <= 200 && (await codeMatches(code, env))) {
-      return redirect('/', { 'set-cookie': sessionCookie(await createToken(env)) });
+    const matched = code.length <= 200 ? await matchCode(code, active) : null;
+    if (matched) {
+      return redirect('/', { 'set-cookie': sessionCookie(await createToken(matched, nowMs)) });
     }
     // Slow down guessing a little; the edge function is also rate limited per IP.
     if (failDelayMs) await new Promise((resolve) => setTimeout(resolve, failDelayMs));
-    return htmlResponse(loginPage({ error: true }), 401);
+    return htmlResponse(loginPage({ error: !expired, expired }), 401);
   }
 
   return new Response('Method not allowed', {
