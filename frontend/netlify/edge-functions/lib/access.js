@@ -217,7 +217,7 @@ export function loginPage({ error = false } = {}) {
     </div>
     <button type="submit" class="primary">Access Calculator</button>
   </form>
-  <p class="request">Don't have a code? <a href="${REQUEST_ACCESS_MAILTO.replace(/&/g, '&amp;')}">Email Chuck to request one</a></p>
+  <p class="request">Don't have a code? <a href="${REQUEST_ACCESS_MAILTO.replace(/&/g, '&amp;')}">Email Chuck to request one</a>, or write to ${CREATOR_EMAIL}</p>
   <hr>
   <p class="small">With dedication from Chuck ❤️ Christine Carpenter</p>
   <p class="small"><a href="${FEEDBACK_MAILTO}">Provide Feedback</a></p>

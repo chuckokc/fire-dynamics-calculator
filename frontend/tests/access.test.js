@@ -199,7 +199,7 @@ test('login page: offers an email to the creator to request the code', async () 
   // On the page, as a clickable link (the & between subject and body is escaped for HTML).
   for (const html of [loginPage(), loginPage({ error: true })]) {
     assert.match(html, /Don't have a code\? <a href="mailto:chuckokc@gmail\.com\?subject=Fire%20Dynamics%20Calculator%20Access%20Request&amp;body=/);
-    assert.match(html, />Email Chuck to request one<\/a>/);
+    assert.match(html, />Email Chuck to request one<\/a>, or write to chuckokc@gmail\.com<\/p>/, 'address is also shown as plain text for people without an email app');
     assert.match(html, /Provide Feedback/);
   }
 });
