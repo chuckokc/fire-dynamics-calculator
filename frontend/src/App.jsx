@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
 import { MessageSquare, Sun, Moon } from 'lucide-react';
@@ -14,7 +15,29 @@ import { ColorModeScript } from '@chakra-ui/react';
 import theme from './theme';
 import { checkAccess } from './accessCheck';
 
-const APP_VERSION = '1.7.0';
+const APP_VERSION = '1.8.0';
+
+// One column for every calculator, so the heading, description, warning and form
+// line up and the width does not change when you switch tabs. px matches the
+// padding inside each calculator.
+const CalculatorPanel = ({ title, description, warning, children }) => (
+  <Chakra.Box maxW="2xl" mx="auto" w="100%">
+    <Chakra.VStack spacing={4} align="stretch" px={{ base: 4, sm: 6 }}>
+      <Chakra.Heading size="md">{title}</Chakra.Heading>
+      <Chakra.Text color="fd.muted" fontSize="sm">{description}</Chakra.Text>
+      {warning && (
+        <Chakra.Alert status="warning" variant="left-accent" alignItems="flex-start">
+          <Chakra.AlertIcon />
+          <Chakra.Box>
+            <Chakra.AlertTitle>{warning.title}</Chakra.AlertTitle>
+            <Chakra.AlertDescription fontSize="sm">{warning.text}</Chakra.AlertDescription>
+          </Chakra.Box>
+        </Chakra.Alert>
+      )}
+    </Chakra.VStack>
+    <Chakra.Box py={4}>{children}</Chakra.Box>
+  </Chakra.Box>
+);
 
 // MainApp component contains all calculator functionality and the main interface
 const MainApp = () => {
@@ -73,13 +96,13 @@ const MainApp = () => {
           >
             <Chakra.VStack align="stretch" spacing={1}>
               <Chakra.Heading size={{ base: 'md', md: 'lg' }}>Fire Dynamics Calculator</Chakra.Heading>
-              <Chakra.Text color="gray.600" fontSize={{ base: 'sm', md: 'md' }}>
+              <Chakra.Text color="fd.muted" fontSize={{ base: 'sm', md: 'md' }}>
                 Professional fire investigation tools based on NUREG-1805 methodology
               </Chakra.Text>
             </Chakra.VStack>
 
             <Chakra.HStack spacing={2} flexShrink={0}>
-              <Chakra.Text fontSize="xs" color="gray.500">v{APP_VERSION}</Chakra.Text>
+              <Chakra.Text fontSize="xs" color="fd.muted">v{APP_VERSION}</Chakra.Text>
               <Chakra.IconButton
                 icon={colorMode === 'light' ? <Moon size={16} /> : <Sun size={16} />}
                 variant="ghost"
@@ -115,77 +138,63 @@ const MainApp = () => {
           <Chakra.TabPanels>
             {/* Heat Release Rate Calculator Panel */}
             <Chakra.TabPanel>
-              <Chakra.VStack spacing={4} align="stretch">
-                <Chakra.Heading size="md">Heat Release Rate Calculator</Chakra.Heading>
-                <Chakra.Text color="gray.600" fontSize="sm">
-                  Calculates heat release rate using the Heat Release Rate Equation.
-                                  </Chakra.Text>
-                <Chakra.Center py={4}>
-                  <HeatReleaseCalculator />
-                </Chakra.Center>
-              </Chakra.VStack>
+              <CalculatorPanel
+                title="Heat Release Rate Calculator"
+                description="Calculates heat release rate using the Heat Release Rate Equation."
+              >
+                <HeatReleaseCalculator />
+              </CalculatorPanel>
             </Chakra.TabPanel>
 
             {/* Flame Height Calculator Panel */}
             <Chakra.TabPanel>
-              <Chakra.VStack spacing={4} align="stretch">
-                <Chakra.Heading size="md">Flame Height Calculator</Chakra.Heading>
-                <Chakra.Text color="gray.600" fontSize="sm">
-                  Calculates flame height for a fire in the middle of a room (Heskestad), against a wall, or in a corner (NUREG-1805). Use for a single fuel item or package.
-                  DO NOT USE IN A ROOM THAT HAS BEEN THROUGH FLASHOVER OR FULL INVOLVEMENT!
-                                  </Chakra.Text>
-                <Chakra.Center py={4}>
-                  <FlameHeightCalculator />
-                </Chakra.Center>
-              </Chakra.VStack>
+              <CalculatorPanel
+                title="Flame Height Calculator"
+                description="Calculates flame height for a fire in the middle of a room (Heskestad), against a wall, or in a corner (NUREG-1805). Use for a single fuel item or package."
+                warning={{
+                  title: 'Not valid after flashover',
+                  text: 'Do not use in a room that has been through flashover or full involvement.',
+                }}
+              >
+                <FlameHeightCalculator />
+              </CalculatorPanel>
             </Chakra.TabPanel>
 
             {/* Point Source Radiation Calculator Panel */}
             <Chakra.TabPanel>
-              <Chakra.VStack spacing={4} align="stretch">
-                <Chakra.Heading size="md">Point Source Radiation Calculator</Chakra.Heading>
-                <Chakra.Text color="gray.600" fontSize="sm">
-                  Calculates radiative heat flux using the Point Source Radiation Model.
-                                  </Chakra.Text>
-                <Chakra.Center py={4}>
-                  <PointSourceCalculator />
-                </Chakra.Center>
-              </Chakra.VStack>
+              <CalculatorPanel
+                title="Point Source Radiation Calculator"
+                description="Calculates radiative heat flux using the Point Source Radiation Model."
+              >
+                <PointSourceCalculator />
+              </CalculatorPanel>
             </Chakra.TabPanel>
 
             {/* Flashover Calculator Panel */}
             <Chakra.TabPanel>
-              <Chakra.VStack spacing={4} align="stretch">
-                <Chakra.Heading size="md">Flashover Calculator</Chakra.Heading>
-                <Chakra.Text color="gray.600" fontSize="sm">
-                  Estimate minimum heat release rate required for flashover using MQH, 
-                  Babrauskas, and Thomas correlations.
-                </Chakra.Text>
-                <Chakra.Center py={4}>
-                  <FlashoverCalculator />
-                </Chakra.Center>
-              </Chakra.VStack>
+              <CalculatorPanel
+                title="Flashover Calculator"
+                description="Estimate minimum heat release rate required for flashover using MQH, Babrauskas, and Thomas correlations."
+              >
+                <FlashoverCalculator />
+              </CalculatorPanel>
             </Chakra.TabPanel>
 
             {/* T-Squared Growth Calculator Panel */}
-<Chakra.TabPanel>
-  <Chakra.VStack spacing={4} align="stretch">
-    <Chakra.Heading size="md">T-Squared Fire Growth Calculator</Chakra.Heading>
-    <Chakra.Text color="gray.600" fontSize="sm">
-      Calculate heat release rate over time using the t-squared fire growth model 
-      with standard growth rate coefficients (slow, medium, fast, ultra-fast).
-    </Chakra.Text>
-    <Chakra.Center py={4}>
-      <TSquaredCalculator />
-    </Chakra.Center>
-  </Chakra.VStack>
-</Chakra.TabPanel>
+            <Chakra.TabPanel>
+              <CalculatorPanel
+                title="T-Squared Fire Growth Calculator"
+                description="Calculate heat release rate over time using the t-squared fire growth model with standard growth rate coefficients (slow, medium, fast, ultra-fast)."
+              >
+                <TSquaredCalculator />
+              </CalculatorPanel>
+            </Chakra.TabPanel>
 
             {/* Reference Data Panel */}
             <Chakra.TabPanel>
               <Chakra.VStack spacing={4} align="stretch">
                 <Chakra.Heading size="md">Reference Data</Chakra.Heading>
-                <Chakra.Text color="gray.600" fontSize="sm">
+                <Chakra.Text color="fd.muted" fontSize="sm">
                   Material properties, heat release rates, and mass flux values for common fuels and materials.
                 </Chakra.Text>
                 <ReferenceGuide />

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
+import EquationCard from '../EquationCard';
 import { alphaSI, solveTSquared } from '../../calculations/tSquared.js';
 import { DEFAULT_UNITS, convertInput, fromSI } from '../../calculations/units.js';
 import ShowWork from '../ShowWork';
@@ -453,23 +454,20 @@ const TSquaredCalculator = () => {
     <Chakra.Box p={{ base: 4, sm: 6 }} maxW="2xl" mx="auto">
       <Chakra.VStack spacing={{ base: 4, sm: 6 }} align="stretch">
         {/* Formula Card */}
-        <Chakra.Card variant="outline">
-          <Chakra.CardBody>
-            <Chakra.Text fontSize={{ base: "md", sm: "lg" }} fontWeight="bold">T-Squared Fire Growth Model:</Chakra.Text>
-            <Chakra.Text fontSize={{ base: "lg", sm: "xl" }} fontFamily="mono">
-              Q = αt²
-            </Chakra.Text>
-            <Chakra.Text fontSize="sm" color="gray.600" mt={2}>
-              Where:
-              <br />
-              Q = Heat release rate (kW or BTU/s)
-              <br />
-              α = Fire growth coefficient (kW/s² or BTU/s³)
-              <br />
-              t = Time (seconds)
-            </Chakra.Text>
-          </Chakra.CardBody>
-        </Chakra.Card>
+        <EquationCard
+          title="T-Squared Fire Growth Model:"
+          equation={<>Q = αt²</>}
+        >
+          <Chakra.Text fontSize="sm" color="fd.muted" mt={2}>
+            Where:
+            <br />
+            Q = Heat release rate (kW or BTU/s)
+            <br />
+            α = Fire growth coefficient (kW/s² or BTU/s³)
+            <br />
+            t = Time (seconds)
+          </Chakra.Text>
+        </EquationCard>
 
         {/* Growth Rate Coefficients Reference */}
         <Chakra.Card variant="outline" bg={Chakra.useColorModeValue('gray.50', 'gray.700')}>
@@ -523,7 +521,7 @@ const TSquaredCalculator = () => {
             >
               <Chakra.NumberInputField inputMode="decimal" />
             </Chakra.NumberInput>
-            <Chakra.Text fontSize="sm" color="gray.600">
+            <Chakra.Text fontSize="sm" color="fd.muted">
               {units === 'SI' ? 'kW/s²' : 'BTU/s³'}
             </Chakra.Text>
           </Chakra.FormControl>
@@ -540,7 +538,7 @@ const TSquaredCalculator = () => {
             >
               <Chakra.NumberInputField inputMode="decimal" />
             </Chakra.NumberInput>
-            <Chakra.Text fontSize="sm" color="gray.600">seconds</Chakra.Text>
+            <Chakra.Text fontSize="sm" color="fd.muted">seconds</Chakra.Text>
           </Chakra.FormControl>
         ) : (
           <Chakra.FormControl isRequired>
@@ -552,7 +550,7 @@ const TSquaredCalculator = () => {
             >
               <Chakra.NumberInputField inputMode="decimal" />
             </Chakra.NumberInput>
-            <Chakra.Text fontSize="sm" color="gray.600">
+            <Chakra.Text fontSize="sm" color="fd.muted">
               {units === 'SI' ? 'kW' : 'BTU/s'}
             </Chakra.Text>
           </Chakra.FormControl>
@@ -572,7 +570,7 @@ const TSquaredCalculator = () => {
               </Chakra.HStack>
             </Chakra.RadioGroup>
             
-            <Chakra.Text fontSize="xs" color="gray.500">
+            <Chakra.Text fontSize="xs" color="fd.muted">
               Switching units converts the values already entered.
             </Chakra.Text>
           </Chakra.VStack>
@@ -635,10 +633,10 @@ const TSquaredCalculator = () => {
                           <Chakra.Text fontSize="sm" fontWeight="medium">
                             {entry.result.type}: {entry.result.value.toFixed(2)} {entry.result.unit}
                           </Chakra.Text>
-                          <Chakra.Text fontSize="xs" color="gray.600">
+                          <Chakra.Text fontSize="xs" color="fd.muted">
                             {entry.timestamp}
                           </Chakra.Text>
-                          <Chakra.Text fontSize="xs" color="gray.500">
+                          <Chakra.Text fontSize="xs" color="fd.muted">
                             Mode: {entry.calculateMode === 'heatRelease' ? 'HRR from time' : 'Time to HRR'}
                           </Chakra.Text>
                         </Chakra.VStack>
@@ -646,11 +644,11 @@ const TSquaredCalculator = () => {
                           <Chakra.Text fontSize="sm" fontWeight="bold" textTransform="capitalize">
                             {entry.growthRate}
                           </Chakra.Text>
-                          <Chakra.Text fontSize="xs" color="gray.600">
+                          <Chakra.Text fontSize="xs" color="fd.muted">
                             α = {entry.result.alpha.toFixed(5)} kW/s²
                           </Chakra.Text>
                           {entry.calculateMode === 'time' && entry.result.value && (
-                            <Chakra.Text fontSize="xs" color="gray.500">
+                            <Chakra.Text fontSize="xs" color="fd.muted">
                               {(entry.result.value / 60).toFixed(1)} min
                             </Chakra.Text>
                           )}
@@ -695,7 +693,7 @@ const TSquaredCalculator = () => {
                     )}
                   </Chakra.Text>
                   {calculateMode === 'time' && (
-                    <Chakra.Text fontSize="sm" color="gray.600">
+                    <Chakra.Text fontSize="sm" color="fd.muted">
                       = {(result.value / 60).toFixed(2)} minutes
                     </Chakra.Text>
                   )}

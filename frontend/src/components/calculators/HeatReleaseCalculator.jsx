@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as Chakra from '@chakra-ui/react';
+import EquationCard from '../EquationCard';
 import { MATERIAL_PROPERTIES, heatReleaseRate, labMassFlux } from '../../calculations/hrr.js';
 import ShowWork from '../ShowWork';
 import { SendHRRMenu } from '../HrrTransfer';
@@ -102,7 +103,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
       <Chakra.NumberInput size="sm" value={value} onChange={(vs) => setValue(vs)} min={0}>
         <Chakra.NumberInputField inputMode="decimal" />
       </Chakra.NumberInput>
-      <Chakra.Text fontSize="xs" color="gray.600">{unit}</Chakra.Text>
+      <Chakra.Text fontSize="xs" color="fd.muted">{unit}</Chakra.Text>
     </Chakra.FormControl>
   );
 
@@ -147,30 +148,27 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
   }, [material, burningArea, manualMassFlux, units]);
   
   return (
-    <Chakra.Box p={6} maxW="2xl" mx="auto">
+    <Chakra.Box p={{ base: 4, sm: 6 }} maxW="2xl" mx="auto">
       <Chakra.VStack spacing={6} align="stretch">
-        <Chakra.Card variant="outline">
-          <Chakra.CardBody>
-            <Chakra.Text fontSize="lg" fontWeight="bold">Heat Release Rate Equation:</Chakra.Text>
-            <Chakra.Text fontSize="xl" fontFamily="mono">
-              Q̇ = ṁ" × A × ΔHc
-            </Chakra.Text>
-            <Chakra.Text fontSize="sm" color="gray.600" mt={2}>
-              Where:
-              <br />
-              Q̇ = Heat release rate (kW or BTU/s)
-              <br />
-              ṁ" = Mass loss rate per unit area (g/m²-s)
-              <br />
-              A = Burning area (m² or ft²)
-              <br />
-              ΔHc = Heat of combustion (kJ/g)
-            </Chakra.Text>
-            <Chakra.Text fontSize="sm" color="gray.600" mt={3} fontStyle="italic">
-              Note: Built-in mass flux values (Quintiere, 2016) are typical for well-developed, free-burning fires. Smaller pools and spills (roughly 2 m / 6 ft across or less) burn more slowly, so this simple equation can overestimate their heat release rate. NUREG-1805 adds a small-pool correction, (1 − e^−kβD), that this calculator leaves out.
-            </Chakra.Text>
-          </Chakra.CardBody>
-        </Chakra.Card>
+        <EquationCard
+          title="Heat Release Rate Equation:"
+          equation={<>Q̇ = ṁ" × A × ΔHc</>}
+        >
+          <Chakra.Text fontSize="sm" color="fd.muted" mt={2}>
+            Where:
+            <br />
+            Q̇ = Heat release rate (kW or BTU/s)
+            <br />
+            ṁ" = Mass loss rate per unit area (g/m²-s)
+            <br />
+            A = Burning area (m² or ft²)
+            <br />
+            ΔHc = Heat of combustion (kJ/g)
+          </Chakra.Text>
+          <Chakra.Text fontSize="sm" color="fd.muted" mt={3} fontStyle="italic">
+            Note: Built-in mass flux values (Quintiere, 2016) are typical for well-developed, free-burning fires. Smaller pools and spills (roughly 2 m / 6 ft across or less) burn more slowly, so this simple equation can overestimate their heat release rate. NUREG-1805 adds a small-pool correction, (1 − e^−kβD), that this calculator leaves out.
+          </Chakra.Text>
+        </EquationCard>
 
         <Chakra.FormControl isRequired>
           <Chakra.FormLabel>Material</Chakra.FormLabel>
@@ -206,7 +204,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
     >
       <Chakra.NumberInputField inputMode="decimal" />
     </Chakra.NumberInput>
-    <Chakra.Text fontSize="sm" color="gray.600">g/m²-s</Chakra.Text>
+    <Chakra.Text fontSize="sm" color="fd.muted">g/m²-s</Chakra.Text>
   </Chakra.FormControl>
 ) : null}
 
@@ -217,7 +215,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
             </Chakra.Button>
             {showLab && (
               <Chakra.VStack align="stretch" spacing={3} mt={3}>
-                <Chakra.Text fontSize="sm" color="gray.600">
+                <Chakra.Text fontSize="sm" color="fd.muted">
                   Weigh the sample before and after burning, time the burn, and measure the burning surface.
                 </Chakra.Text>
                 <Chakra.SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
@@ -254,7 +252,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
           >
             <Chakra.NumberInputField inputMode="decimal" />
           </Chakra.NumberInput>
-          <Chakra.Text fontSize="sm" color="gray.600">
+          <Chakra.Text fontSize="sm" color="fd.muted">
             {units === 'SI' ? 'm²' : 'ft²'}
           </Chakra.Text>
         </Chakra.FormControl>
@@ -272,7 +270,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
               </Chakra.HStack>
             </Chakra.RadioGroup>
             
-            <Chakra.Text fontSize="xs" color="gray.500">
+            <Chakra.Text fontSize="xs" color="fd.muted">
               Switching units converts the values already entered.
             </Chakra.Text>
           </Chakra.VStack>
@@ -330,7 +328,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
                         <Chakra.Text fontSize="sm" fontWeight="medium">
                           {entry.materialName}
                         </Chakra.Text>
-                        <Chakra.Text fontSize="xs" color="gray.600">
+                        <Chakra.Text fontSize="xs" color="fd.muted">
                           {entry.timestamp}
                         </Chakra.Text>
                       </Chakra.VStack>
@@ -338,7 +336,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
                         <Chakra.Text fontSize="sm" fontWeight="bold">
                           {entry.result.toFixed(0)} {entry.units === 'SI' ? 'kW' : 'BTU/s'}
                         </Chakra.Text>
-                        <Chakra.Text fontSize="xs" color="gray.600">
+                        <Chakra.Text fontSize="xs" color="fd.muted">
                           {entry.burningArea} {entry.units === 'SI' ? 'm²' : 'ft²'}
                         </Chakra.Text>
                       </Chakra.VStack>
@@ -369,7 +367,7 @@ const needsMassFluxInput = selectedMaterial && !selectedMaterial.massFlux;
             Heat of Combustion: {MATERIAL_PROPERTIES[material].heatOfCombustion} kJ/g
           </Chakra.Text>
         )}
-        <Chakra.Text fontSize="sm" color="gray.600">
+        <Chakra.Text fontSize="sm" color="fd.muted">
           Conversion: 1 kW = 0.947817 BTU/s
         </Chakra.Text>
       </Chakra.VStack>
