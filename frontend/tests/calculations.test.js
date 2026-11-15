@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { toSI, fromSI, convertInput, KW_TO_BTU_PER_S } from '../src/calculations/units.js';
+import { toSI, fromSI, convertInput, unitLabel, DEFAULT_UNITS } from '../src/calculations/units.js';
 import { MATERIAL_PROPERTIES, heatReleaseRate, labMassFlux } from '../src/calculations/hrr.js';
 import { solveFlameHeight } from '../src/calculations/flameHeight.js';
 import { pointSourceFlux, centerDistance } from '../src/calculations/pointSource.js';
@@ -25,25 +25,64 @@ const near = (actual, expected, rel = 1e-4, label = '') => {
 };
 
 // ---------------------------------------------------------------- units
-test('units: round trips and known factors', () => {
-  near(toSI(1, 'length', 'imperial'), 0.3048, 1e-12, 'ft→m');
-  near(toSI(1, 'area', 'imperial'), 0.09290304, 1e-12, 'ft²→m²');
-  near(toSI(1, 'hrr', 'imperial'), 1.055056, 1e-9, 'BTU/s→kW');
-  near(fromSI(1, 'hrr', 'imperial'), 0.947817, 1e-6, 'kW→BTU/s');
-  near(fromSI(1, 'heatFlux', 'imperial'), 0.088055, 1e-9, 'kW/m²→BTU/ft²·s');
-  for (const q of ['length', 'area', 'hrr', 'alpha', 'heatFlux']) {
-    near(fromSI(toSI(123.4, q, 'imperial'), q, 'imperial'), 123.4, 1e-12, `${q} round trip`);
-    assert.equal(toSI(5, q, 'SI'), 5);
+test('units: feet and meters convert both ways, and only lengths and areas change', () => {
+  near(toSI(1, 'length', 'feet'), 0.3048, 1e-12, 'ft→m');
+  near(toSI(1, 'area', 'feet'), 0.09290304, 1e-12, 'ft²→m²');
+  near(fromSI(1, 'length', 'feet'), 3.28084, 1e-5, 'm→ft');
+  for (const q of ['length', 'area']) {
+    near(fromSI(toSI(123.4, q, 'feet'), q, 'feet'), 123.4, 1e-12, `${q} round trip`);
+    assert.equal(toSI(5, q, 'metric'), 5, `${q} unchanged in metric`);
+    assert.equal(fromSI(5, q, 'metric'), 5, `${q} unchanged in metric`);
   }
-  assert.equal(convertInput('10', 'length', true), '32.81');
-  assert.equal(convertInput('32.81', 'length', false), '10.00');
+  assert.equal(convertInput('10', 'length', true), '32.808');
   assert.equal(convertInput('', 'length', true), '');
+  // A round trip gives back what was typed, so switching units never nudges an answer
+  for (const typed of ['10', '3.5', '12.25', '30']) {
+    const inMeters = convertInput(typed, 'length', false);
+    assert.equal(convertInput(inMeters, 'length', true), typed, `${typed} ft → ${inMeters} m → ft`);
+  }
+  // Other values can differ in the fifth digit (6.7 ft → 2.0422 m → 6.7001 ft), far below what any answer shows
+  for (const typed of ['6.7', '8', '13.37', '0.5']) {
+    const back = convertInput(convertInput(typed, 'length', false), 'length', true);
+    near(parseFloat(back), parseFloat(typed), 2e-5, `${typed} ft round trip`);
+  }
+  for (const typed of ['10', '8', '2.5']) {
+    const back = convertInput(convertInput(typed, 'area', false), 'area', true);
+    near(parseFloat(back), parseFloat(typed), 1e-4, `${typed} ft² round trip`);
+  }
+  assert.equal(convertInput('10', 'length', false), '3.048', '10 ft shown to the millimeter');
+  assert.equal(convertInput('10', 'area', false), '0.92903');
+  assert.equal(DEFAULT_UNITS, 'feet');
+});
+
+test('units: energy is always kW, whatever the length unit', () => {
+  for (const units of ['metric', 'feet']) {
+    assert.equal(unitLabel('hrr', units), 'kW');
+    assert.equal(unitLabel('alpha', units), 'kW/s²');
+    assert.equal(unitLabel('heatFlux', units), 'kW/m²');
+  }
+  assert.equal(unitLabel('length', 'feet'), 'ft');
+  assert.equal(unitLabel('length', 'metric'), 'm');
+  assert.equal(unitLabel('area', 'feet'), 'ft²');
+  assert.equal(unitLabel('area', 'metric'), 'm²');
+});
+
+test('units: a leftover unit name or an energy quantity fails loudly, never quietly wrong', () => {
+  // 'SI' and 'imperial' were the old names. Treated as metric they would give wrong numbers.
+  for (const stale of ['SI', 'imperial', undefined]) {
+    assert.throws(() => toSI(1, 'length', stale), /Unknown unit system/);
+    assert.throws(() => fromSI(1, 'length', stale), /Unknown unit system/);
+    assert.throws(() => unitLabel('length', stale), /Unknown unit system/);
+  }
+  for (const energy of ['hrr', 'alpha', 'heatFlux']) {
+    assert.throws(() => toSI(1, energy, 'feet'), /only length and area/);
+  }
 });
 
 // ---------------------------------------------------------------- flashover
 // NUREG 13 (SI): 30.48 x 5.49 x 3.048 m, vent 0.914 x 2.44 m, concrete
-test('flashover: NUREG 13 SI example (A_T, Babrauskas, Thomas)', () => {
-  const r = flashoverHRR({ W: 30.48, L: 5.49, H: 3.048, wv: 0.914, hv: 2.44, material: 'concrete', units: 'SI' });
+test('flashover: NUREG 13 metric example (A_T, Babrauskas, Thomas)', () => {
+  const r = flashoverHRR({ W: 30.48, L: 5.49, H: 3.048, wv: 0.914, hv: 2.44, material: 'concrete', units: 'metric' });
   near(r.AO, 2.23016, 1e-9, 'Av (E94)');
   near(r.AT, 551.71336, 1e-9, 'A_T (E107)');
   near(r.kW.babrauskas, 2612.715962583, 1e-9, 'Babrauskas (D131)');
@@ -51,14 +90,11 @@ test('flashover: NUREG 13 SI example (A_T, Babrauskas, Thomas)', () => {
 });
 
 // NUREG 13 (English): 100 x 18 x 10 ft, vent 3 x 8 ft
-test('flashover: NUREG 13 English example, feet in, kW and BTU/s out', () => {
-  const r = flashoverHRR({ W: 100, L: 18, H: 10, wv: 3, hv: 8, material: 'concrete', units: 'imperial' });
+test('flashover: NUREG 13 English example, feet in, kW out', () => {
+  const r = flashoverHRR({ W: 100, L: 18, H: 10, wv: 3, hv: 8, material: 'concrete', units: 'feet' });
   near(r.AT, 551.47244544, 1e-9, 'A_T (E107)');
   near(r.kW.babrauskas, 2611.28879542923, 1e-9, 'Babrauskas kW (J168)');
   near(r.kW.thomas, 5617.57462732833, 1e-9, 'Thomas kW (J172)');
-  // Sheet uses 0.94785 for BTU/s; ours is 0.947817 (within 0.01%)
-  near(r.babrauskas, 2475.1100847476, 1e-4, 'Babrauskas BTU/s (H168)');
-  near(r.thomas, 5324.61811051316, 1e-4, 'Thomas BTU/s (H172)');
 });
 
 test('flashover: MQH equation reproduces NUREG with NUREG h_k = k/δ', () => {
@@ -81,9 +117,9 @@ test('flashover: materials and 600 s h_k', () => {
 // ---------------------------------------------------------------- flame height
 // NUREG 04 Wall_Flame_Height: Q = 1525.168 kW, fire length √1.4 m
 const Qw = 1525.16847167292, Ww = Math.sqrt(1.4);
-test('flame height: NUREG 04 wall fire, SI and imperial', () => {
+test('flame height: NUREG 04 wall fire, meters and feet', () => {
   near(solveFlameHeight({ mode: 'flameHeight', location: 'wall', Q: Qw, D: Ww }).value, 4.02699834491514, 1e-9, 'Hf (D145)');
-  near(solveFlameHeight({ mode: 'flameHeight', location: 'wall', Q: Qw * KW_TO_BTU_PER_S, D: Ww / 0.3048, units: 'imperial' }).value,
+  near(solveFlameHeight({ mode: 'flameHeight', location: 'wall', Q: Qw, D: Ww / 0.3048, units: 'feet' }).value,
     13.2119368271494, 1e-9, 'Hf ft (H145)');
   near(solveFlameHeight({ mode: 'heatRelease', location: 'wall', L: 4.02699834491514, D: Ww }).value, Qw, 1e-9, 'back-solve Q');
   near(solveFlameHeight({ mode: 'diameter', location: 'wall', Q: Qw, L: 4.02699834491514 }).value, Ww, 1e-9, 'back-solve W');
@@ -91,9 +127,9 @@ test('flame height: NUREG 04 wall fire, SI and imperial', () => {
 
 // NUREG 04 Corner_Flame_Height: Q = 979.693 kW
 const Qc = 979.692852669948;
-test('flame height: NUREG 04 corner fire, SI and imperial', () => {
+test('flame height: NUREG 04 corner fire, meters and feet', () => {
   near(solveFlameHeight({ mode: 'flameHeight', location: 'corner', Q: Qc }).value, 4.67428541519219, 1e-9, 'Hf (D118)');
-  near(solveFlameHeight({ mode: 'flameHeight', location: 'corner', Q: Qc * KW_TO_BTU_PER_S, units: 'imperial' }).value,
+  near(solveFlameHeight({ mode: 'flameHeight', location: 'corner', Q: Qc, units: 'feet' }).value,
     15.3355820708405, 1e-9, 'Hf ft (H118)');
   near(solveFlameHeight({ mode: 'heatRelease', location: 'corner', L: 4.67428541519219 }).value, Qc, 1e-9, 'back-solve Q');
   assert.equal(solveFlameHeight({ mode: 'diameter', location: 'corner', Q: Qc, L: 4.67 }), null, 'corner has no size term');
@@ -104,11 +140,15 @@ test('flame height: Heskestad (middle of room)', () => {
   near(solveFlameHeight({ mode: 'flameHeight', location: 'center', Q: 1000, D: 1 }).value, L, 1e-12, 'L');
   near(solveFlameHeight({ mode: 'heatRelease', location: 'center', L, D: 1 }).value, 1000, 1e-9, 'Q');
   near(solveFlameHeight({ mode: 'diameter', location: 'center', Q: 1000, L }).value, 1, 1e-9, 'D');
-  // imperial: same fire in ft and BTU/s
-  const ft = solveFlameHeight({ mode: 'flameHeight', location: 'center', Q: 1000 * KW_TO_BTU_PER_S, D: 1 / 0.3048, units: 'imperial' });
+  // feet: the same fire with the lengths in ft and the heat release still in kW
+  const ft = solveFlameHeight({ mode: 'flameHeight', location: 'center', Q: 1000, D: 1 / 0.3048, units: 'feet' });
   near(ft.value, L / 0.3048, 1e-9, 'L ft');
-  const q = solveFlameHeight({ mode: 'heatRelease', location: 'center', L: L / 0.3048, D: 1 / 0.3048, units: 'imperial' });
-  near(q.kW, 1000, 1e-9, 'kW alongside BTU/s');
+  near(ft.valueM, L, 1e-12, 'the same height in meters');
+  const q = solveFlameHeight({ mode: 'heatRelease', location: 'center', L: L / 0.3048, D: 1 / 0.3048, units: 'feet' });
+  near(q.value, 1000, 1e-9, 'Q kW');
+  const d = solveFlameHeight({ mode: 'diameter', location: 'center', Q: 1000, L: L / 0.3048, units: 'feet' });
+  near(d.value, 1 / 0.3048, 1e-9, 'D ft');
+  near(d.valueM, 1, 1e-9, 'D m');
 });
 
 // ---------------------------------------------------------------- point source
@@ -118,10 +158,9 @@ test('point source: NUREG 05.1 example', () => {
   const R = 35.9765541151751;                 // E108 = L + D/2
   const r = pointSourceFlux({ Q, R, chi: 0.3 });
   near(r.kWm2, 9.7335250964314, 1e-9, "q'' kW/m² (C115)");
-  // Sheet's BTU/ft²·s: q'' × 317 / 3600 (E115)
-  const ri = pointSourceFlux({ Q: Q * KW_TO_BTU_PER_S, R: R / 0.3048, chi: 0.3, units: 'imperial' });
-  near(ri.kWm2, 9.7335250964314, 1e-9, "q'' from imperial inputs");
-  near(ri.value, 0.857090959880209, 1e-4, "q'' BTU/ft²·s (E115)");
+  // distance in feet, heat release in kW, flux still in kW/m²
+  const ri = pointSourceFlux({ Q, R: R / 0.3048, chi: 0.3, units: 'feet' });
+  near(ri.kWm2, 9.7335250964314, 1e-9, "q'' from distance in feet");
 });
 
 // ---------------------------------------------------------------- HRR
@@ -129,9 +168,8 @@ test('HRR: Q = m" A ΔHc with Quintiere (2016) values', () => {
   const g = MATERIAL_PROPERTIES.gasoline;
   assert.deepEqual([g.massFlux, g.heatOfCombustion], [55, 43.7]);
   near(heatReleaseRate({ massFlux: g.massFlux, heatOfCombustion: g.heatOfCombustion, area: 1 }).kW, 2403.5, 1e-12, '1 m² gasoline');
-  const imp = heatReleaseRate({ massFlux: 55, heatOfCombustion: 43.7, area: 1 / 0.09290304, units: 'imperial' });
+  const imp = heatReleaseRate({ massFlux: 55, heatOfCombustion: 43.7, area: 1 / 0.09290304, units: 'feet' });
   near(imp.kW, 2403.5, 1e-9, '10.76 ft² gasoline, kW');
-  near(imp.value, 2403.5 * KW_TO_BTU_PER_S, 1e-9, 'BTU/s');
   // Spot checks against the Quintiere table (range midpoints)
   assert.equal(MATERIAL_PROPERTIES.heptane.massFlux, 70);            // 65-75
   assert.equal(MATERIAL_PROPERTIES.liquefied_propane.massFlux, 115); // 100-130
@@ -150,15 +188,17 @@ test('t-squared: standard α reach 1055 kW (1000 BTU/s) at t_g', () => {
   }
 });
 
-test('t-squared: custom α entered in BTU/s³ is converted (imperial)', () => {
-  const alphaKW = 0.0469;
-  const alphaBTU = alphaKW * KW_TO_BTU_PER_S;
-  const a = alphaSI({ growthRate: 'custom', customAlpha: String(alphaBTU), units: 'imperial' });
-  near(a, alphaKW, 1e-9, 'α back in kW/s²');
-  const r = solveTSquared({ mode: 'heatRelease', alpha: a, t: 100, units: 'imperial' });
-  near(r.value, alphaBTU * 100 * 100, 1e-9, 'Q in BTU/s = α(BTU/s³) t²');
-  const t = solveTSquared({ mode: 'time', alpha: a, Q: 1000, units: 'imperial' });
-  near(t.value, Math.sqrt(1000 / alphaBTU), 1e-9, 'time to 1000 BTU/s');
+test('t-squared: everything is kW and seconds, with a custom α in kW/s²', () => {
+  const a = alphaSI({ growthRate: 'custom', customAlpha: '0.0469' });
+  near(a, 0.0469, 1e-12, 'custom α is used as entered');
+  near(alphaSI({ growthRate: 'fast' }), GROWTH_RATES.fast, 1e-12, 'standard rate');
+  assert.equal(alphaSI({ growthRate: 'custom', customAlpha: '' }), 0, 'no α yet');
+  const r = solveTSquared({ mode: 'heatRelease', alpha: a, t: 100 });
+  near(r.value, 469, 1e-9, 'Q = α t²');
+  assert.equal(r.unit, 'kW');
+  const t = solveTSquared({ mode: 'time', alpha: a, Q: 1000 });
+  near(t.value, Math.sqrt(1000 / 0.0469), 1e-9, 'time to 1000 kW');
+  assert.equal(t.unit, 'seconds');
 });
 
 // ---------------------------------------------------------------- classroom features
@@ -168,15 +208,15 @@ test('point source: edge distance + diameter gives NUREG center distance (05.1 E
   const r = pointSourceFlux({ Q: 527713.117489372, chi: 0.3, edgeDistance: 29.87, diameter: D });
   near(r.R_m, 35.9765541151751, 1e-12, 'R used');
   near(r.kWm2, 9.7335250964314, 1e-9, "q'' (C115)");
-  const ri = pointSourceFlux({ Q: 527713.117489372 * KW_TO_BTU_PER_S, chi: 0.3, edgeDistance: 29.87 / 0.3048, diameter: D / 0.3048, units: 'imperial' });
-  near(ri.kWm2, 9.7335250964314, 1e-9, "q'' from imperial edge inputs");
+  const ri = pointSourceFlux({ Q: 527713.117489372, chi: 0.3, edgeDistance: 29.87 / 0.3048, diameter: D / 0.3048, units: 'feet' });
+  near(ri.kWm2, 9.7335250964314, 1e-9, "q'' from edge distance and diameter in feet");
   assert.ok(r.steps.some((st) => st.formula === 'R = L + D/2'), 'shows R = L + D/2 step');
 });
 
 test('lab helper: mass flux from a burn', () => {
   const r = labMassFlux({ initialMass: 250, finalMass: 200, time: 100, area: 0.01 });
   near(r.massFlux, 50, 1e-12, '50 g over 0.01 m² in 100 s');            // 50 / (0.01 × 100)
-  const ri = labMassFlux({ initialMass: 250, finalMass: 200, time: 100, area: 0.01 / 0.09290304, units: 'imperial' });
+  const ri = labMassFlux({ initialMass: 250, finalMass: 200, time: 100, area: 0.01 / 0.09290304, units: 'feet' });
   near(ri.massFlux, 50, 1e-9, 'same sample in ft²');
   assert.ok(labMassFlux({ initialMass: 200, finalMass: 250, time: 100, area: 0.01 }).error, 'mass gain is an error');
   assert.ok(labMassFlux({ initialMass: 250, finalMass: 200, time: 0, area: 0.01 }).error, 'zero time is an error');
@@ -193,14 +233,77 @@ test('flashover: compare a fire with the three estimates', () => {
 test('show the work: steps end with the same answer', () => {
   const hrr = heatReleaseRate({ massFlux: 55, heatOfCombustion: 43.7, area: 1 });
   assert.equal(hrr.steps.at(-1).result, '2,404 kW');
-  const fo = flashoverHRR({ W: 30.48, L: 5.49, H: 3.048, wv: 0.914, hv: 2.44, material: 'concrete', units: 'SI' });
+  const fo = flashoverHRR({ W: 30.48, L: 5.49, H: 3.048, wv: 0.914, hv: 2.44, material: 'concrete', units: 'metric' });
   assert.equal(fo.steps.find((st) => st.label === 'Babrauskas').result, '2,613 kW');
   assert.ok(fo.steps.some((st) => st.formula === 'A_T = 2(LW + LH + WH) − Aₒ'));
   const fh = solveFlameHeight({ mode: 'flameHeight', location: 'wall', Q: 1525.16847167292, D: Math.sqrt(1.4) });
-  assert.equal(fh.steps.at(-1).result, '4.027 m');
-  const ft = solveFlameHeight({ mode: 'flameHeight', location: 'corner', Q: 948, units: 'imperial' });
-  assert.equal(ft.steps[0].label, 'Convert heat release rate to kW');
-  assert.match(ft.steps.at(-1).result, / ft$/);
+  assert.equal(fh.steps.at(-2).result, '4.027 m', 'the answer in meters');
+  assert.equal(fh.steps.at(-1).result, '13.21 ft', 'then the same height in feet, for reference');
+  assert.match(fh.steps.at(-1).label, /for reference/);
   const t2 = solveTSquared({ mode: 'heatRelease', alpha: 0.0469, t: 100 });
   assert.equal(t2.steps.at(-1).result, '469 kW');
+});
+
+// ---------------------------------------------------------------- feet and meters in the working
+test('show the work: feet are converted to meters step by step, with the factor shown', () => {
+  // 10 ft² of gasoline
+  const hrr = heatReleaseRate({ massFlux: 55, heatOfCombustion: 43.7, area: 10, units: 'feet' });
+  const area = hrr.steps[0];
+  assert.match(area.label, /Convert burning area to m²/);
+  assert.match(area.label, /1 ft² = 0.092903 m²/);
+  assert.equal(area.formula, 'm² = ft² × 0.092903');
+  assert.equal(area.values, '10 ft² × 0.092903');
+  assert.equal(area.result, '0.929 m²');
+  assert.equal(hrr.steps.at(-1).result, `${(2403.5 * 0.09290304 * 10).toLocaleString('en-US', { maximumSignificantDigits: 4 })} kW`);
+
+  // 30 ft from a 10 ft wide fire: both lengths are converted before R = L + D/2
+  const ps = pointSourceFlux({ Q: 1000, chi: 0.3, edgeDistance: 30, diameter: 10, units: 'feet' });
+  assert.equal(ps.steps[0].result, '9.144 m');
+  assert.equal(ps.steps[1].result, '3.048 m');
+  assert.match(ps.steps[0].label, /1 ft = 0.3048 m/);
+  assert.ok(ps.steps.findIndex((st) => st.formula === 'R = L + D/2') > 1, 'convert first, then add');
+
+  // Flashover converts all five dimensions
+  const fo = flashoverHRR({ W: 12, L: 14, H: 8, wv: 3, hv: 6.7, material: 'gypsum', units: 'feet' });
+  assert.deepEqual(fo.steps.slice(0, 5).map((st) => st.formula), Array(5).fill('m = ft × 0.3048'));
+});
+
+test('show the work: meters are converted back to feet for a length answer', () => {
+  // Flame height in feet: worked in meters, then converted back
+  const ft = solveFlameHeight({ mode: 'flameHeight', location: 'wall', Q: 1525.16847167292, D: Math.sqrt(1.4) / 0.3048, units: 'feet' });
+  assert.equal(ft.steps[0].label, 'Convert fire length along wall to m (1 ft = 0.3048 m)');
+  assert.equal(ft.steps[0].result, '1.183 m');
+  const back = ft.steps.at(-1);
+  assert.equal(back.label, 'Convert flame height to ft (1 m = 3.28084 ft)');
+  assert.equal(back.formula, 'ft = m × 3.28084');
+  assert.equal(back.result, '13.21 ft');
+  // Solving for the fire size ends the same way
+  const size = solveFlameHeight({ mode: 'diameter', location: 'wall', Q: 1525.16847167292, L: 4.02699834491514 / 0.3048, units: 'feet' });
+  assert.equal(size.steps[0].label, 'Convert flame height to m (1 ft = 0.3048 m)');
+  assert.match(size.steps.at(-1).label, /^Convert fire length to ft/);
+});
+
+test('show the work: in metric nothing is converted on the way in, and the answer in feet is for reference', () => {
+  const m = solveFlameHeight({ mode: 'flameHeight', location: 'wall', Q: 1525.16847167292, D: Math.sqrt(1.4) });
+  assert.ok(m.steps.every((st) => st.formula !== 'm = ft × 0.3048'), 'no ft→m step');
+  assert.equal(m.valueM, m.value, 'meters answer is the answer');
+  assert.match(m.steps.at(-1).label, /^Flame height in feet, for reference \(1 m = 3.28084 ft\)$/);
+  const hrr = heatReleaseRate({ massFlux: 55, heatOfCombustion: 43.7, area: 10, units: 'metric' });
+  assert.ok(hrr.steps.every((st) => !/ft/.test(`${st.label}${st.formula}`)), 'metric HRR never mentions feet');
+});
+
+test('no BTU anywhere in the results or the working', () => {
+  const runs = [
+    heatReleaseRate({ massFlux: 55, heatOfCombustion: 43.7, area: 10, units: 'feet' }),
+    pointSourceFlux({ Q: 1000, chi: 0.3, edgeDistance: 30, diameter: 10, units: 'feet' }),
+    flashoverHRR({ W: 12, L: 14, H: 8, wv: 3, hv: 6.7, material: 'gypsum', units: 'feet' }),
+    solveTSquared({ mode: 'heatRelease', alpha: 0.0469, t: 100 }),
+    solveTSquared({ mode: 'time', alpha: 0.0469, Q: 1000 }),
+    ...['flameHeight', 'heatRelease', 'diameter'].map((mode) =>
+      solveFlameHeight({ mode, location: 'center', Q: 1000, D: 3, L: 9, units: 'feet' }))
+  ];
+  for (const run of runs) {
+    assert.ok(run && !run.error, 'every run produces an answer');
+    assert.ok(!/BTU/i.test(JSON.stringify(run)), `BTU found in ${JSON.stringify(run).slice(0, 80)}`);
+  }
 });

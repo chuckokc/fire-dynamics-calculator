@@ -1,7 +1,7 @@
 // Minimum HRR for compartment flashover (NUREG-1805 Ch. 13,
 // spreadsheet 13_Compartment_Flashover_Calculations): MQH, Babrauskas, Thomas.
-import { toSI, fromSI, FT_TO_M, KW_TO_BTU_PER_S } from './units.js';
-import { fmt, step, conversionStep } from './work.js';
+import { toSI, METRIC, FEET } from './units.js';
+import { fmt, step, feetToMetersStep } from './work.js';
 
 // Material thermal properties (k in kW/m/K, ρ in kg/m³, c in kJ/kg/K)
 // Values from NUREG-1805 (Klote & Milke, Principles of Smoke Management,
@@ -56,10 +56,10 @@ export const thomasHRR = (AT, AO, HO) => 7.8 * AT + 378 * AO * Math.sqrt(HO);
  * @param {number} H,W,L  room height, width, length (m or ft)
  * @param {number} hv,wv  opening height, width (m or ft)
  * @param {string} material  key of MATERIALS
- * @returns {null | {kW: {mqh, thomas, babrauskas}, mqh, thomas, babrauskas, hk, AT, AO}}
- *   mqh/thomas/babrauskas are in display units (kW or BTU/s)
+ * @param {'metric'|'feet'} units  how the dimensions are entered (the answers are always kW)
+ * @returns {null | {kW: {mqh, thomas, babrauskas}, hk, AT, AO, steps}}
  */
-export function flashoverHRR({ H, W, L, hv, wv, material, units = 'SI' }) {
+export function flashoverHRR({ H, W, L, hv, wv, material, units = METRIC }) {
   if (![H, W, L, hv, wv].every((v) => v > 0)) return null;
   const mat = MATERIALS[material];
   if (!mat) return null;
@@ -73,12 +73,10 @@ export function flashoverHRR({ H, W, L, hv, wv, material, units = 'SI' }) {
     babrauskas: babrauskasHRR(AO, ho)
   };
 
-  const imperial = units === 'imperial';
   const steps = [];
-  if (imperial) {
+  if (units === FEET) {
     const names = ['room height', 'room width', 'room length', 'opening height', 'opening width'];
-    [H, W, L, hv, wv].forEach((v, i) =>
-      steps.push(conversionStep(`Convert ${names[i]} to m`, v, 'ft', FT_TO_M, '0.3048', 'm')));
+    [H, W, L, hv, wv].forEach((v, i) => steps.push(feetToMetersStep(`Convert ${names[i]} to m`, v)));
   }
   const sqrtHo = Math.sqrt(ho);
   steps.push(step('Opening area', 'Aₒ = wₒ × hₒ', `${fmt(wo)} × ${fmt(ho)}`, `${fmt(AO)} m²`));
@@ -91,22 +89,8 @@ export function flashoverHRR({ H, W, L, hv, wv, material, units = 'SI' }) {
   steps.push(step('Babrauskas', 'Q̇fo = 750 Aₒ √hₒ', `750 × ${fmt(AO)} × ${fmt(sqrtHo)}`, `${fmt(kW.babrauskas)} kW`));
   steps.push(step('Thomas', 'Q̇fo = 7.8 A_T + 378 Aₒ √hₒ',
     `7.8 × ${fmt(AT)} + 378 × ${fmt(AO)} × ${fmt(sqrtHo)}`, `${fmt(kW.thomas)} kW`));
-  if (imperial) {
-    steps.push(step('Convert to BTU/s', 'BTU/s = kW × 0.9478',
-      `${fmt(kW.mqh)}, ${fmt(kW.babrauskas)}, ${fmt(kW.thomas)} × 0.9478`,
-      `${fmt(kW.mqh * KW_TO_BTU_PER_S)}, ${fmt(kW.babrauskas * KW_TO_BTU_PER_S)}, ${fmt(kW.thomas * KW_TO_BTU_PER_S)} BTU/s`));
-  }
 
-  return {
-    kW,
-    steps,
-    mqh: fromSI(kW.mqh, 'hrr', units),
-    thomas: fromSI(kW.thomas, 'hrr', units),
-    babrauskas: fromSI(kW.babrauskas, 'hrr', units),
-    hk,
-    AT,
-    AO
-  };
+  return { kW, steps, hk, AT, AO };
 }
 
 /**

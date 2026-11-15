@@ -2,8 +2,8 @@
 // Material values: Quintiere, J. G. (2016). Principles of fire behavior
 // (2nd ed.). Where Quintiere gives a range, the midpoint is used. Materials
 // without a massFlux value ask the user for one (e.g., measured in a lab).
-import { toSI, fromSI, FT2_TO_M2, KW_TO_BTU_PER_S } from './units.js';
-import { fmt, step, conversionStep } from './work.js';
+import { toSI, METRIC, FEET } from './units.js';
+import { fmt, step, squareFeetToSquareMetersStep } from './work.js';
 
 export const MATERIAL_PROPERTIES = {
     // Liquids with both heat of combustion and mass flux
@@ -51,31 +51,25 @@ export const MATERIAL_PROPERTIES = {
  * Q = m" × A × ΔHc
  * @param {number} massFlux  g/m²·s
  * @param {number} heatOfCombustion  kJ/g
- * @param {number} area  m² (SI) or ft² (imperial)
- * @param {string} units  'SI' | 'imperial'
- * @returns {{ kW: number, value: number }|null}  value is in display units
+ * @param {number} area  m² (metric) or ft² (feet)
+ * @param {string} units  'metric' | 'feet': how the area is entered
+ * @returns {{ kW: number, steps }|null}  the answer is always in kW
  */
-export function heatReleaseRate({ massFlux, heatOfCombustion, area, units = 'SI' }) {
+export function heatReleaseRate({ massFlux, heatOfCombustion, area, units = METRIC }) {
   if (!(massFlux > 0) || !(heatOfCombustion > 0) || !(area > 0)) return null;
   const areaM2 = toSI(area, 'area', units);
   // (g/m²·s ÷ 1000) = kg/m²·s;  kJ/g = MJ/kg, × 1000 = kJ/kg  →  kW
   const kW = (massFlux / 1000) * areaM2 * heatOfCombustion * 1000;
-  const value = fromSI(kW, 'hrr', units);
 
   const steps = [];
-  if (units === 'imperial') {
-    steps.push(conversionStep('Convert burning area to m²', area, 'ft²', FT2_TO_M2, '0.0929', 'm²'));
-  }
+  if (units === FEET) steps.push(squareFeetToSquareMetersStep('Convert burning area to m²', area));
   steps.push(step('Mass flux in kg/m²·s', 'ṁ″ (kg/m²·s) = ṁ″ (g/m²·s) ÷ 1000',
     `${fmt(massFlux)} ÷ 1000`, `${fmt(massFlux / 1000)} kg/m²·s`));
   steps.push(step('Heat of combustion in kJ/kg', 'ΔHc (kJ/kg) = ΔHc (kJ/g) × 1000',
     `${fmt(heatOfCombustion)} × 1000`, `${fmt(heatOfCombustion * 1000)} kJ/kg`));
   steps.push(step('Heat release rate', 'Q̇ = ṁ″ × A × ΔHc',
     `${fmt(massFlux / 1000)} × ${fmt(areaM2)} × ${fmt(heatOfCombustion * 1000)}`, `${fmt(kW)} kW`));
-  if (units === 'imperial') {
-    steps.push(conversionStep('Convert to BTU/s', kW, 'kW', KW_TO_BTU_PER_S, '0.9478', 'BTU/s'));
-  }
-  return { kW, value, steps };
+  return { kW, steps };
 }
 
 /**
@@ -86,7 +80,7 @@ export function heatReleaseRate({ massFlux, heatOfCombustion, area, units = 'SI'
  * @param {number} area  sample burning area, m² or ft²
  * @returns {null | {error} | {massFlux: number (g/m²·s), steps}}
  */
-export function labMassFlux({ initialMass, finalMass, time, area, units = 'SI' }) {
+export function labMassFlux({ initialMass, finalMass, time, area, units = METRIC }) {
   if (![initialMass, finalMass, time, area].every(Number.isFinite)) return null;
   if (!(time > 0) || !(area > 0)) return { error: 'Burn time and sample area must be greater than zero.' };
   const lost = initialMass - finalMass;
@@ -96,9 +90,7 @@ export function labMassFlux({ initialMass, finalMass, time, area, units = 'SI' }
   const steps = [
     step('Mass lost', 'Δm = m(start) − m(end)', `${fmt(initialMass)} g − ${fmt(finalMass)} g`, `${fmt(lost)} g`)
   ];
-  if (units === 'imperial') {
-    steps.push(conversionStep('Convert sample area to m²', area, 'ft²', FT2_TO_M2, '0.0929', 'm²'));
-  }
+  if (units === FEET) steps.push(squareFeetToSquareMetersStep('Convert sample area to m²', area));
   steps.push(step('Mass flux', 'ṁ″ = Δm ÷ (A × t)',
     `${fmt(lost)} g ÷ (${fmt(areaM2)} m² × ${fmt(time)} s)`, `${fmt(massFlux)} g/m²·s`));
   return { massFlux, steps };

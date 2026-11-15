@@ -173,17 +173,17 @@ test('no calculator has a Calculate button: every result follows the inputs live
 test('an empty field gives no answer from every solver, and a full form does', () => {
   // The calculators show a result only when the solver returns one, so null here is
   // what removes the result card when a field is cleared.
-  assert.equal(heatReleaseRate({ massFlux: 55, heatOfCombustion: 43.7, area: NaN, units: 'SI' }), null);
-  assert.equal(pointSourceFlux({ Q: 1000, chi: 0.3, R: NaN, units: 'SI' }), null);
-  assert.equal(flashoverHRR({ H: 2.4, W: 3.6, L: 4.2, hv: 2, wv: NaN, material: 'gypsum', units: 'SI' }), null);
-  assert.equal(solveTSquared({ mode: 'heatRelease', alpha: 0.0117, t: NaN, Q: NaN, units: 'SI' }), null);
-  assert.equal(solveFlameHeight({ mode: 'flameHeight', location: 'center', Q: 1000, D: NaN, L: NaN, units: 'SI' }), null);
+  assert.equal(heatReleaseRate({ massFlux: 55, heatOfCombustion: 43.7, area: NaN, units: 'metric' }), null);
+  assert.equal(pointSourceFlux({ Q: 1000, chi: 0.3, R: NaN, units: 'metric' }), null);
+  assert.equal(flashoverHRR({ H: 2.4, W: 3.6, L: 4.2, hv: 2, wv: NaN, material: 'gypsum', units: 'metric' }), null);
+  assert.equal(solveTSquared({ mode: 'heatRelease', alpha: 0.0117, t: NaN, Q: NaN }), null);
+  assert.equal(solveFlameHeight({ mode: 'flameHeight', location: 'center', Q: 1000, D: NaN, L: NaN, units: 'metric' }), null);
 
-  assert.ok(heatReleaseRate({ massFlux: 55, heatOfCombustion: 43.7, area: 10, units: 'SI' }));
-  assert.ok(pointSourceFlux({ Q: 1000, chi: 0.3, R: 10, units: 'SI' }));
-  assert.ok(flashoverHRR({ H: 2.4, W: 3.6, L: 4.2, hv: 2, wv: 0.9, material: 'gypsum', units: 'SI' }));
-  assert.ok(solveTSquared({ mode: 'heatRelease', alpha: 0.0117, t: 120, Q: NaN, units: 'SI' }));
-  assert.ok(solveFlameHeight({ mode: 'flameHeight', location: 'center', Q: 1000, D: 3, L: NaN, units: 'SI' }));
+  assert.ok(heatReleaseRate({ massFlux: 55, heatOfCombustion: 43.7, area: 10, units: 'metric' }));
+  assert.ok(pointSourceFlux({ Q: 1000, chi: 0.3, R: 10, units: 'metric' }));
+  assert.ok(flashoverHRR({ H: 2.4, W: 3.6, L: 4.2, hv: 2, wv: 0.9, material: 'gypsum', units: 'metric' }));
+  assert.ok(solveTSquared({ mode: 'heatRelease', alpha: 0.0117, t: 120, Q: NaN }));
+  assert.ok(solveFlameHeight({ mode: 'flameHeight', location: 'center', Q: 1000, D: 3, L: NaN, units: 'metric' }));
 });
 
 test('each calculator clears its result when the inputs give no answer', () => {
@@ -197,4 +197,61 @@ test('each calculator clears its result when the inputs give no answer', () => {
   for (const [name, pattern] of Object.entries(clears)) {
     assert.match(read(`components/calculators/${name}Calculator.jsx`), pattern, name);
   }
+});
+
+// ---------- units: meters or feet for lengths, kW for energy ----------
+
+// Every source file under src/ (not tests), so a leftover BTU label can't hide in one component.
+const sourceFiles = (dir) => readdirSync(dir).flatMap((name) => {
+  const full = join(dir, name);
+  return statSync(full).isDirectory() ? sourceFiles(full) : /\.jsx?$/.test(name) ? [full] : [];
+});
+
+test('no screen or calculation shows BTU, SI or Imperial any more', () => {
+  for (const file of sourceFiles(SRC)) {
+    const code = readFileSync(file, 'utf8')
+      .split('\n')
+      .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))      // comments may mention the history
+      .join('\n');
+    assert.ok(!/BTU/i.test(code), `${file} still mentions BTU`);
+    assert.ok(!/'SI'|'imperial'|"SI"|"imperial"|>\s*Imperial|>\s*SI\b/.test(code), `${file} still uses the old SI / imperial names`);
+  }
+});
+
+test('the four length-based calculators share one Meters / Feet toggle; T-Squared has none', () => {
+  for (const name of ['HeatRelease', 'FlameHeight', 'PointSource', 'Flashover']) {
+    const source = read(`components/calculators/${name}Calculator.jsx`);
+    assert.match(source, /<UnitToggle value=\{units\} onChange=\{handleUnitsChange\}/, `${name} should use UnitToggle`);
+    assert.match(source, /DEFAULT_UNITS/, `${name} should start from the default unit`);
+  }
+  const tSquared = read('components/calculators/TSquaredCalculator.jsx');
+  assert.ok(!/UnitToggle|units/.test(tSquared.replace(/\/\/.*$/gm, '')), 'T-Squared is kW and seconds only, so it has no unit choice');
+  const toggle = read('components/UnitToggle.jsx');
+  assert.match(toggle, /Meters \(m\)/);
+  assert.match(toggle, /Feet \(ft\)/);
+  assert.match(toggle, /Square meters \(m²\)/);
+  assert.match(toggle, /Square feet \(ft²\)/);
+});
+
+test('switching units converts lengths and areas only, never the heat release rate', () => {
+  for (const name of ['HeatRelease', 'FlameHeight', 'PointSource', 'Flashover']) {
+    const source = read(`components/calculators/${name}Calculator.jsx`);
+    assert.ok(!/convertInput\([^)]*'(hrr|alpha|heatFlux)'/.test(source), `${name} converts an energy value`);
+    assert.match(source, /convertInput\([^)]*'(length|area)'/, `${name} should convert its lengths or area`);
+  }
+});
+
+test('a transferred heat release rate arrives in kW as it is', () => {
+  for (const name of ['FlameHeight', 'PointSource', 'Flashover', 'TSquared']) {
+    const source = read(`components/calculators/${name}Calculator.jsx`);
+    assert.match(source, /\(kW\.toFixed\(2\)\)|kW\.toFixed\(2\)/, `${name} should take the kW value directly`);
+    assert.ok(!/fromSI\(kW/.test(source), `${name} should not convert a transferred kW`);
+  }
+});
+
+test('flame height shows a length answer in both feet and meters', () => {
+  const source = read('components/calculators/FlameHeightCalculator.jsx');
+  assert.match(source, /const otherLength = /);
+  assert.match(source, /note: otherLength \? `\(\$\{otherLength\}\)` : null/);
+  assert.match(source, /M_TO_FT/);
 });

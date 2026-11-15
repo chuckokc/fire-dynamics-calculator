@@ -4,8 +4,9 @@ import EquationCard from '../EquationCard';
 import ResultCard from '../ResultCard';
 import ScrollableTabList from '../ScrollableTabList';
 import { pointSourceFlux, pointSourceFluxSI, radiusForFluxSI } from '../../calculations/pointSource.js';
-import { DEFAULT_UNITS, convertInput, toSI, fromSI } from '../../calculations/units.js';
+import { DEFAULT_UNITS, FEET, convertInput, toSI, fromSI, unitLabel } from '../../calculations/units.js';
 import ShowWork from '../ShowWork';
+import UnitToggle from '../UnitToggle';
 import { useIncomingHRR } from '../HrrTransfer';
 
 // Radiation Zone Visual Component
@@ -21,8 +22,8 @@ const RadiationZoneVisual = ({ heatRelease, distance, radiativeFraction, units }
     { name: 'Flashover Conditions', flux: 20, color: 'red.600' }
   ];
 
-  // Convert inputs to SI for calculation
-  const Q = toSI(parseFloat(heatRelease) || 0, 'hrr', units);
+  // Heat release is already kW; the distance is converted to meters for the calculation
+  const Q = parseFloat(heatRelease) || 0;
   const R = toSI(parseFloat(distance) || 0, 'length', units);
   const Xr = parseFloat(radiativeFraction) || 0.3;
 
@@ -147,7 +148,7 @@ const RadiationZoneVisual = ({ heatRelease, distance, radiativeFraction, units }
             boxShadow="md"
           >
             <Chakra.Text fontSize={{ base: "10px", sm: "xs" }} color="fd.muted">
-              Distance: {distance} {units === 'imperial' ? 'ft' : 'm'}
+              Distance: {distance} {unitLabel('length', units)}
             </Chakra.Text>
           </Chakra.Box>
         </Chakra.Box>
@@ -166,12 +167,6 @@ const RadiationZoneVisual = ({ heatRelease, distance, radiativeFraction, units }
               Heat Flux Zones:
             </Chakra.Text>
             {zones.map((zone) => {
-              const radius = calculateRadius(zone.flux);
-              const displayRadius = units === 'imperial' ? 
-                (radius * 3.28084).toFixed(1) : 
-                radius.toFixed(1);
-              const unitLabel = units === 'imperial' ? 'ft' : 'm';
-              
               return (
                 <Chakra.HStack key={zone.name} spacing={2} align="center">
                   <Chakra.Box 
@@ -206,7 +201,6 @@ const PointSourceCalculator = () => {
   const [radiativeFraction, setRadiativeFraction] = useState('0.3');
   const [units, setUnits] = useState(DEFAULT_UNITS);
   const [result, setResult] = useState(null);
-  const [resultKW, setResultKW] = useState(null);
   const [resultSteps, setResultSteps] = useState(null);
   // Distance can be entered from the center of the fire, or from its edge plus the fire diameter
   const [distanceMode, setDistanceMode] = useState('center');
@@ -255,16 +249,6 @@ const PointSourceCalculator = () => {
     }
   };
 
-  // Unit conversion functions
-  const convertHeatFlux = (value, toImperial) => {
-    if (!value) return '';
-    const numVal = parseFloat(value);
-    if (toImperial) {
-      return numVal * 0.088055; // kW/m² to BTU/ft²/s
-    }
-    return numVal * 11.356; // BTU/ft²/s to kW/m²
-  };
-
   // Function to save calculation to history
   const saveToHistory = () => {
     if (!result) return;
@@ -277,8 +261,8 @@ const PointSourceCalculator = () => {
       radiativeFraction: radiativeFraction,
       units: units,
       result: result,
-      // Store actual flux value in SI for comparison
-      fluxKW: resultKW
+      // The flux in kW/m², used to colour the history entry
+      fluxKW: result
     };
     
     // Keep only last 10 calculations
@@ -304,14 +288,13 @@ const PointSourceCalculator = () => {
 
   // HRR sent from another calculator
   useIncomingHRR('pointSource', (kW) => {
-    setHeatRelease(fromSI(kW, 'hrr', units).toFixed(2));
+    setHeatRelease(kW.toFixed(2));
   });
 
   // The result is live: it follows the inputs, so it is cleared whenever they are
   // incomplete or give no answer, and never left showing numbers for a different form.
   const clearResult = () => {
     setResult(null);
-    setResultKW(null);
     setResultSteps(null);
   };
 
@@ -321,19 +304,17 @@ const PointSourceCalculator = () => {
       ? pointSourceFlux({ ...common, edgeDistance: parseFloat(edgeDistance), diameter: parseFloat(fireDiameter) })
       : pointSourceFlux({ ...common, R: parseFloat(distance) });
     if (!r) return clearResult();
-    setResult(r.value);
-    setResultKW(r.kWm2);
+    setResult(r.kWm2);
     setResultSteps(r.steps);
   };
 
   // Switching units converts what's already entered
   const handleUnitsChange = (newUnits) => {
     if (newUnits === units) return;
-    const toImperial = newUnits === 'imperial';
-    setHeatRelease(prev => convertInput(prev, 'hrr', toImperial));
-    setDistance(prev => convertInput(prev, 'length', toImperial));
-    setEdgeDistance(prev => convertInput(prev, 'length', toImperial));
-    setFireDiameter(prev => convertInput(prev, 'length', toImperial));
+    const toFeet = newUnits === FEET;
+    setDistance(prev => convertInput(prev, 'length', toFeet));
+    setEdgeDistance(prev => convertInput(prev, 'length', toFeet));
+    setFireDiameter(prev => convertInput(prev, 'length', toFeet));
     setUnits(newUnits);
   };
 
@@ -344,10 +325,10 @@ const PointSourceCalculator = () => {
     copyText += `Date: ${new Date().toLocaleString()}\n`;
     copyText += `Method: q" = χᵣQ̇/(4πR²)\n\n`;
     copyText += `Result:\n`;
-    copyText += `- Radiative Heat Flux: ${result.toFixed(2)} ${units === 'SI' ? 'kW/m²' : `BTU/ft²/s (${resultKW.toFixed(2)} kW/m²)`}\n\n`;
+    copyText += `- Radiative Heat Flux: ${result.toFixed(2)} kW/m²\n\n`;
     copyText += `Input Parameters:\n`;
-    copyText += `- Heat Release Rate: ${heatRelease} ${units === 'SI' ? 'kW' : 'BTU/s'}\n`;
-    copyText += `- Distance from fire center: ${effectiveDistance} ${units === 'SI' ? 'm' : 'ft'}\n`;
+    copyText += `- Heat Release Rate: ${heatRelease} kW\n`;
+    copyText += `- Distance from fire center: ${effectiveDistance} ${unitLabel('length', units)}\n`;
     copyText += `- Radiative Fraction: ${radiativeFraction} (${(parseFloat(radiativeFraction) * 100).toFixed(0)}%)\n`;
     
     navigator.clipboard.writeText(copyText).then(() => {
@@ -366,9 +347,8 @@ const PointSourceCalculator = () => {
 
   const getHeatFluxStatus = (criticalValue) => {
     if (!result) return 'gray';
-    const compareValue = units === 'SI' ? criticalValue : convertHeatFlux(criticalValue, true);
-    if (result >= compareValue) return 'red';
-    if (result >= compareValue * 0.8) return 'yellow';
+    if (result >= criticalValue) return 'red';
+    if (result >= criticalValue * 0.8) return 'yellow';
     return 'green';
   };
 
@@ -382,9 +362,9 @@ const PointSourceCalculator = () => {
           <Chakra.Text fontSize="sm" color="fd.muted" mt={2}>
             Where:
             <br />
-            q" = Radiative heat flux at target (kW/m² or BTU/ft²/s)
+            q" = Radiative heat flux at target (kW/m²)
             <br />
-            Q̇ = Total heat release rate (kW or BTU/s)
+            Q̇ = Total heat release rate (kW)
             <br />
             χᵣ = Radiative fraction (typical value 0.3)
             <br />
@@ -404,7 +384,7 @@ const PointSourceCalculator = () => {
             <Chakra.NumberInputField inputMode="decimal" />
           </Chakra.NumberInput>
           <Chakra.Text fontSize="sm" color="fd.muted">
-            {units === 'SI' ? 'kW' : 'BTU/s'}
+            kW
           </Chakra.Text>
         </Chakra.FormControl>
 
@@ -429,7 +409,7 @@ const PointSourceCalculator = () => {
             <Chakra.NumberInputField inputMode="decimal" />
           </Chakra.NumberInput>
           <Chakra.Text fontSize="sm" color="fd.muted">
-            {units === 'SI' ? 'm' : 'ft'}, measured from the center of the fire (edge distance + ½ fire diameter)
+            {unitLabel('length', units)}, measured from the center of the fire (edge distance + ½ fire diameter)
           </Chakra.Text>
         </Chakra.FormControl>
         ) : (
@@ -439,18 +419,18 @@ const PointSourceCalculator = () => {
               <Chakra.NumberInput value={edgeDistance} onChange={(vs) => setEdgeDistance(vs)} min={0}>
                 <Chakra.NumberInputField inputMode="decimal" />
               </Chakra.NumberInput>
-              <Chakra.Text fontSize="sm" color="fd.muted">{units === 'SI' ? 'm' : 'ft'}</Chakra.Text>
+              <Chakra.Text fontSize="sm" color="fd.muted">{unitLabel('length', units)}</Chakra.Text>
             </Chakra.FormControl>
             <Chakra.FormControl isRequired>
               <Chakra.FormLabel>Fire Diameter (D)</Chakra.FormLabel>
               <Chakra.NumberInput value={fireDiameter} onChange={(vs) => setFireDiameter(vs)} min={0}>
                 <Chakra.NumberInputField inputMode="decimal" />
               </Chakra.NumberInput>
-              <Chakra.Text fontSize="sm" color="fd.muted">{units === 'SI' ? 'm' : 'ft'}</Chakra.Text>
+              <Chakra.Text fontSize="sm" color="fd.muted">{unitLabel('length', units)}</Chakra.Text>
             </Chakra.FormControl>
             {effectiveDistance && (
               <Chakra.Text fontSize="sm" color="fd.muted" gridColumn={{ sm: 'span 2' }}>
-                R = L + D/2 = {effectiveDistance} {units === 'SI' ? 'm' : 'ft'} from the center of the fire
+                R = L + D/2 = {effectiveDistance} {unitLabel('length', units)} from the center of the fire
               </Chakra.Text>
             )}
           </Chakra.SimpleGrid>
@@ -472,24 +452,7 @@ const PointSourceCalculator = () => {
           </Chakra.Text>
         </Chakra.FormControl>
 
-        <Chakra.FormControl>
-          <Chakra.FormLabel>Units</Chakra.FormLabel>
-          <Chakra.VStack align="start" spacing={2}>
-            <Chakra.RadioGroup 
-              value={units} 
-              onChange={handleUnitsChange}
-            >
-              <Chakra.HStack spacing={4}>
-                <Chakra.Radio value="SI">SI (m, kW)</Chakra.Radio>
-                <Chakra.Radio value="imperial">Imperial (ft, BTU/s)</Chakra.Radio>
-              </Chakra.HStack>
-            </Chakra.RadioGroup>
-            
-            <Chakra.Text fontSize="xs" color="fd.muted">
-              Switching units converts the values already entered.
-            </Chakra.Text>
-          </Chakra.VStack>
-        </Chakra.FormControl>
+        <UnitToggle value={units} onChange={handleUnitsChange} />
 
         {/* Add history toggle button */}
         {calculationHistory.length > 0 && (
@@ -542,18 +505,18 @@ const PointSourceCalculator = () => {
                       <Chakra.HStack justify="space-between">
                         <Chakra.VStack align="start" spacing={0}>
                           <Chakra.Text fontSize="sm" fontWeight="medium">
-                            {entry.result.toFixed(2)} {entry.units === 'SI' ? 'kW/m²' : 'BTU/ft²/s'}
+                            {entry.result.toFixed(2)} kW/m²
                           </Chakra.Text>
                           <Chakra.Text fontSize="xs" color="fd.muted">
                             {entry.timestamp}
                           </Chakra.Text>
                           <Chakra.Text fontSize="xs" color="fd.muted">
-                            @ {entry.distance} {entry.units === 'SI' ? 'm' : 'ft'}
+                            @ {entry.distance} {unitLabel('length', entry.units)}
                           </Chakra.Text>
                         </Chakra.VStack>
                         <Chakra.VStack align="end" spacing={0}>
                           <Chakra.Text fontSize="sm" fontWeight="bold">
-                            {entry.heatRelease} {entry.units === 'SI' ? 'kW' : 'BTU/s'}
+                            {entry.heatRelease} kW
                           </Chakra.Text>
                           <Chakra.Text fontSize="xs" color="fd.muted">
                             χᵣ = {entry.radiativeFraction}
@@ -574,16 +537,15 @@ const PointSourceCalculator = () => {
               stats={[{
                 label: 'Radiative Heat Flux',
                 value: result.toFixed(2),
-                unit: units === 'SI' ? 'kW/m²' : 'BTU/ft²/s',
-                note: units === 'SI' ? null : `(${resultKW.toFixed(2)} kW/m²)`,
+                unit: 'kW/m²',
               }]}
               details={(
                 <Chakra.Text>
                   Based on:
                   <br />
-                  Heat Release Rate: {heatRelease} {units === 'SI' ? 'kW' : 'BTU/s'}
+                  Heat Release Rate: {heatRelease} kW
                   <br />
-                  Distance from fire center: {effectiveDistance} {units === 'SI' ? 'm' : 'ft'}
+                  Distance from fire center: {effectiveDistance} {unitLabel('length', units)}
                   <br />
                   Radiative Fraction: {radiativeFraction} ({(parseFloat(radiativeFraction) * 100).toFixed(0)}%)
                 </Chakra.Text>
@@ -601,7 +563,6 @@ const PointSourceCalculator = () => {
               <Chakra.CardBody>
                 <Chakra.VStack align="start" spacing={2}>
                   {Object.entries(CRITICAL_HEAT_FLUX).map(([key, { value, description }]) => {
-                    const compareValue = units === 'SI' ? value : convertHeatFlux(value, true);
                     return (
                       <Chakra.HStack key={key} spacing={2}>
                         <Chakra.Box
@@ -611,7 +572,7 @@ const PointSourceCalculator = () => {
                           borderRadius="full"
                         />
                         <Chakra.Text fontSize={{ base: "sm", sm: "md" }}>
-                          {description}: {compareValue.toFixed(1)} {units === 'SI' ? 'kW/m²' : 'BTU/ft²/s'}
+                          {description}: {value.toFixed(1)} kW/m²
                         </Chakra.Text>
                       </Chakra.HStack>
                     );
